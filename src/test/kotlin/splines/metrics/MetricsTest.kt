@@ -1,6 +1,6 @@
-package numerics.functionals
+package splines.metrics
 
-import numerics.Grid
+import splines.Grid
 import org.junit.jupiter.api.Tag
 import kotlin.math.abs
 import kotlin.test.Test

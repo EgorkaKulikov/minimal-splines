@@ -1,4 +1,4 @@
-package numerics.functionals
+package splines.functionals
 
 /**
  * Набор РАЗЛИЧНЫХ опорных точек семейства функционалов-значений вместе с явной

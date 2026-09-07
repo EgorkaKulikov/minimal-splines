@@ -1,4 +1,4 @@
-package numerics
+package splines
 
 import org.junit.jupiter.api.Tag
 import kotlin.math.abs

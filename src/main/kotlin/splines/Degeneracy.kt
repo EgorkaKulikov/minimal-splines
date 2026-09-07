@@ -1,4 +1,4 @@
-package numerics
+package splines
 
 import kotlin.math.abs
 

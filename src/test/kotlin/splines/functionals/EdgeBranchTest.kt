@@ -1,8 +1,9 @@
-package numerics.functionals
+package splines.functionals
 
-import numerics.GeneratingSystem
-import numerics.Grid
-import numerics.MinimalSplineBasis
+import splines.GeneratingSystem
+import splines.Grid
+import splines.MinimalSplineBasis
+import splines.metrics.errorEh
 import org.junit.jupiter.api.Tag
 import kotlin.test.Test
 import kotlin.test.assertEquals

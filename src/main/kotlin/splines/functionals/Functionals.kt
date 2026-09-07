@@ -1,8 +1,13 @@
-package numerics.functionals
+package splines.functionals
 
 import kotlin.math.abs
 
-import numerics.*
+import numerics.LinearAlgebra
+import numerics.NumericsContext
+import splines.DEGENERACY_RELATIVE_EPS
+import splines.MinimalSplineBasis
+import splines.cancellationScale
+import splines.isSignificant
 
 // ============================================================================
 // 6. ЧЕТЫРЕ СЕМЕЙСТВА (КВАЗИ)ПРОЕКЦИОННЫХ ФУНКЦИОНАЛОВ

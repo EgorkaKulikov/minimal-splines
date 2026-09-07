@@ -1,4 +1,4 @@
-package numerics
+package splines
 
 import org.junit.jupiter.api.Tag
 import kotlin.math.abs
@@ -45,7 +45,7 @@ class MinimalSplineBasisExtraTest {
     @Test fun evalSplineReproducesLinear() {
         // Для phi^B=(1,t,t^2) сплайн воспроизводит линейную функцию точно.
         // Возьмём проектор theta, спроецируем f(t)=t и проверим воспроизведение.
-        val theta = numerics.functionals.ProjFunctionals(b)
+        val theta = splines.functionals.ProjFunctionals(b)
         val c = theta.projectorCoeffs({ t -> t })
         for (t in listOf(0.15, 0.5, 0.81)) {
             assertEquals(t, b.evalSpline(c, t), 1e-8, "linear not reproduced at $t")
@@ -54,7 +54,7 @@ class MinimalSplineBasisExtraTest {
 
     /** evalSplineDeriv: производная линейной функции t равна 1. */
     @Test fun evalSplineDerivOfLinear() {
-        val theta = numerics.functionals.ProjFunctionals(b)
+        val theta = splines.functionals.ProjFunctionals(b)
         val c = theta.projectorCoeffs({ t -> t })
         for (t in listOf(0.2, 0.55, 0.77)) {
             assertEquals(1.0, b.evalSplineDeriv(c, t), 1e-7, "deriv != 1 at $t")

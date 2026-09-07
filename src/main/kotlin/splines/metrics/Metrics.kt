@@ -1,8 +1,8 @@
-package numerics.functionals
+package splines.metrics
 
 import kotlin.math.abs
 
-import numerics.Grid
+import splines.Grid
 
 // ============================================================================
 // 11. МЕТРИКИ

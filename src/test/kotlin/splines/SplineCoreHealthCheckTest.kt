@@ -1,16 +1,16 @@
-package healthchecks
+package splines
 
 import numerics.GaussLegendre
-import numerics.GeneratingSystem
-import numerics.Grid
-import numerics.MinimalSplineBasis
-import numerics.ReferenceSplines
-import numerics.functionals.AveragingFunctionals
-import numerics.functionals.DeBoorFixFunctionals
-import numerics.functionals.FunctionalFamily
-import numerics.functionals.ProjFunctionals
-import numerics.functionals.ThreePointFunctionals
-import numerics.nonDegenerate
+import splines.GeneratingSystem
+import splines.Grid
+import splines.MinimalSplineBasis
+import splines.ReferenceSplines
+import splines.functionals.AveragingFunctionals
+import splines.functionals.DeBoorFixFunctionals
+import splines.functionals.FunctionalFamily
+import splines.functionals.ProjFunctionals
+import splines.functionals.ThreePointFunctionals
+import splines.nonDegenerate
 import org.junit.jupiter.api.Tag
 import kotlin.math.abs
 import kotlin.test.Test
