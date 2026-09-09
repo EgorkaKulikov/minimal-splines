@@ -39,7 +39,7 @@ java {
 
 // Бэкенд линейной алгебры в тестах: см. numerical-core/build.gradle.kts. Здесь он
 // нужен семействам функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
-val numericsBackend: String = System.getProperty("numerics.backend") ?: "multik"
+val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 
 tasks.test {
     useJUnitPlatform()

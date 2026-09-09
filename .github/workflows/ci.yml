@@ -58,8 +58,8 @@ jobs:
       - name: Проверка (тесты, verifyArtifactDependencies, покрытие)
         run: ./gradlew check koverXmlReport --no-daemon
 
-      - name: Тесты на эталонном бэкенде линейной алгебры
-        run: ./gradlew test -Dnumerics.backend=reference --no-daemon
+      - name: Тесты на чисто-Java бэкенде линейной алгебры (F2J LAPACK)
+        run: ./gradlew test -Dnumerics.backend=java --no-daemon
 
       - name: Локальная публикация артефакта (проверка POM и sources)
         run: ./gradlew publishToMavenLocal --no-daemon
