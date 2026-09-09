@@ -45,8 +45,8 @@ numerical-core  <--  minimal-splines  <--  integral-equations
 ```kotlin
 repositories {
     mavenCentral()
-    mavenLocal() // пока артефакты не опубликованы в удалённом реестре
-    // или: maven(url = uri(providers.gradleProperty("numericsRepositoryUrl").get()))
+    mavenLocal() // после `publishToMavenLocal` в обеих библиотеках
+    // numerical-core также доступен из GitHub Packages — см. ниже
 }
 
 dependencies {
@@ -61,8 +61,13 @@ dependencies {
 ./gradlew publishToMavenLocal
 ```
 
-Удалённый реестр Maven пока не задан: точка настройки — блок `publishing.repositories`
-в `build.gradle.kts` и свойство `numericsRepositoryUrl` у потребителей.
+`numerical-core` публикуется в GitHub Packages
+(`https://maven.pkg.github.com/EgorkaKulikov/numerical-core`) — так его берёт CI, так он
+подключён в `build.gradle.kts` (после `mavenLocal()`). Для чтения нужен токен с правом
+`read:packages`: переменные окружения `GITHUB_ACTOR`/`GITHUB_TOKEN` или `gpr.user`/`gpr.token`
+в `~/.gradle/gradle.properties`; локально можно обойтись `publishToMavenLocal`. Сам
+`minimal-splines` в удалённый реестр пока не публикуется: точка настройки — блок
+`publishing.repositories` в `build.gradle.kts` и свойство `numericsRepositoryUrl` у потребителей.
 
 ## Минимальный пример
 

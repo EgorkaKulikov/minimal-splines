@@ -1,18 +1,14 @@
 # CI библиотеки minimal-splines.
 #
 # ЗАВИСИМОСТЬ ОТ numerical-core. Библиотека собирается против ОПУБЛИКОВАННОГО
-# артефакта numerical-core, а удалённого реестра Maven у проекта пока нет. Поэтому job
-# сначала клонирует репозиторий numerical-core (адрес — в env NUMERICAL_CORE_REPO,
-# ветка — NUMERICAL_CORE_REF) и публикует его в ~/.m2 командой publishToMavenLocal, и
-# только затем собирает эту библиотеку. Это НЕ зависимость от исходников: сборка здесь
-# видит numerical-core только как jar в mavenLocal, что проверяет задача
+# артефакта numerical-core из GitHub Packages
+# (https://maven.pkg.github.com/EgorkaKulikov/numerical-core; версия — numericalCoreVersion
+# в gradle.properties, репозиторий объявлен в repositories build.gradle.kts). GitHub Packages
+# требует аутентификацию даже на чтение, поэтому шагам gradle передаётся GITHUB_TOKEN
+# (встроенный токен читает пакеты того же владельца; для этого workflow нужно разрешение
+# packages: read; GITHUB_ACTOR runner выставляет сам). Это НЕ зависимость от исходников:
+# сборка видит numerical-core только как jar, что проверяет задача
 # verifyArtifactDependencies (входит в check).
-#
-# При появлении реестра шаги «Клонировать numerical-core» и «Опубликовать numerical-core»
-# удаляются, а в вызовы gradle добавляется -PnumericsRepositoryUrl=<адрес реестра>
-# (см. repositories в build.gradle.kts). Версия артефакта — numericalCoreVersion в
-# gradle.properties; при клонировании берётся ветка NUMERICAL_CORE_REF, поэтому её
-# версия обязана совпадать с numericalCoreVersion — иначе резолюция зависимости упадёт.
 #
 # Машинно-зависимых гейтов здесь нет: тесты проверяют математические инварианты
 # (биортогональность, разбиение единицы, точность на span), а не эталонные снимки.
@@ -23,9 +19,13 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+  packages: read
+
 env:
-  NUMERICAL_CORE_REPO: https://github.com/EgorkaKulikov/numerical-core
-  NUMERICAL_CORE_REF: main
+  # Учётные данные для чтения numerical-core из GitHub Packages (см. repositories в build.gradle.kts).
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -48,18 +48,11 @@ jobs:
       - name: Настройка Gradle с кэшем
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Клонировать numerical-core
-        run: git clone --depth 1 --branch "$NUMERICAL_CORE_REF" "$NUMERICAL_CORE_REPO" ../numerical-core
-
-      - name: Опубликовать numerical-core в mavenLocal
-        run: ./gradlew publishToMavenLocal --no-daemon
-        working-directory: ../numerical-core
-
       - name: Проверка (тесты, verifyArtifactDependencies, покрытие)
         run: ./gradlew check koverXmlReport --no-daemon
 
-      - name: Тесты на эталонном бэкенде линейной алгебры
-        run: ./gradlew test -Dnumerics.backend=reference --no-daemon
+      - name: Тесты на чисто-Java бэкенде линейной алгебры (F2J LAPACK)
+        run: ./gradlew test -Dnumerics.backend=java --no-daemon
 
       - name: Локальная публикация артефакта (проверка POM и sources)
         run: ./gradlew publishToMavenLocal --no-daemon
@@ -90,18 +83,12 @@ jobs:
       - name: Настройка Gradle с кэшем
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Клонировать numerical-core
-        run: git clone --depth 1 --branch "$NUMERICAL_CORE_REF" "$NUMERICAL_CORE_REPO" ../numerical-core
-
-      - name: Опубликовать numerical-core в mavenLocal
-        run: ./gradlew publishToMavenLocal --no-daemon
-        working-directory: ../numerical-core
-
+      # minimal-splines в удалённый реестр пока не публикуется — пример берёт его из mavenLocal.
       - name: Опубликовать minimal-splines в mavenLocal
         run: ./gradlew publishToMavenLocal --no-daemon
 
       # Отдельная Gradle-сборка со своим settings.gradle.kts: подключает обе библиотеки
-      # только как артефакты и не знает об integral-equations. Падение здесь означает,
-      # что границы библиотек нарушены.
+      # только как артефакты (numerical-core — из GitHub Packages) и не знает об
+      # integral-equations. Падение здесь означает, что границы библиотек нарушены.
       - name: Собрать и запустить пример потребителя
         run: ./gradlew -p examples/standalone-consumer run --no-daemon

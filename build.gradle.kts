@@ -6,12 +6,26 @@ plugins {
 }
 
 repositories {
-    mavenCentral()
     // numerical-core подключается как ОПУБЛИКОВАННЫЙ артефакт, а не как исходники
-    // соседнего репозитория. Локальная разработка: `./gradlew publishToMavenLocal`
-    // в numerical-core, затем сборка здесь. Удалённый репозиторий — через свойство
-    // `numericsRepositoryUrl` (см. README, раздел «Подключение»).
+    // соседнего репозитория. Порядок: mavenLocal первым — локальная сборка
+    // (`./gradlew publishToMavenLocal` в numerical-core) имеет приоритет; затем
+    // GitHub Packages — оттуда артефакт берёт CI. GitHub Packages требует аутентификацию
+    // даже на чтение: переменные окружения GITHUB_ACTOR/GITHUB_TOKEN (в GitHub Actions —
+    // встроенный токен) или gpr.user/gpr.token в ~/.gradle/gradle.properties (токен с
+    // read:packages). Фильтр content ограничивает этот репозиторий группой библиотеки,
+    // чтобы Gradle не ходил в GitHub Packages за остальными зависимостями.
     mavenLocal()
+    maven {
+        name = "GitHubPackagesNumericalCore"
+        url = uri("https://maven.pkg.github.com/EgorkaKulikov/numerical-core")
+        credentials {
+            username = providers.environmentVariable("GITHUB_ACTOR").orNull ?: providers.gradleProperty("gpr.user").orNull ?: ""
+            password = providers.environmentVariable("GITHUB_TOKEN").orNull ?: providers.gradleProperty("gpr.token").orNull ?: ""
+        }
+        content { includeGroup("io.github.egorkakulikov") }
+    }
+    mavenCentral()
+    // Дополнительный реестр по свойству `numericsRepositoryUrl` (см. README, раздел «Подключение»).
     providers.gradleProperty("numericsRepositoryUrl").orNull?.let { maven(url = uri(it)) }
 }
 
@@ -39,7 +53,7 @@ java {
 
 // Бэкенд линейной алгебры в тестах: см. numerical-core/build.gradle.kts. Здесь он
 // нужен семействам функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
-val numericsBackend: String = System.getProperty("numerics.backend") ?: "multik"
+val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 
 tasks.test {
     useJUnitPlatform()
