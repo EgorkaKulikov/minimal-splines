@@ -1,81 +1,119 @@
 package splines
 
 import numerics.Conditioning
+import numerics.DenseMatrix
 import numerics.backend.Backends
 import org.junit.jupiter.api.Tag
+import splines.functionals.ProjFunctionals
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.cosh
 import kotlin.math.max
+import kotlin.math.sinh
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Диагностика обусловленности матриц аппроксимационного соотношения M_k и разбиения
- * единицы при измельчении равномерной сетки. Результат — TSV `build/reports/conditioning-diagnostic.tsv`
- * (колонки `sys n k cond pu`), сводка печатается одной строкой на конфигурацию.
+ * Обусловленность матриц аппроксимационного соотношения в локальных координатах интервала
+ * (T_k M_k) при измельчении сетки и при изменении положения и масштаба отрезка. Для сравнения
+ * записывается и число обусловленности глобальной матрицы M_k. Результат — TSV
+ * `build/reports/conditioning-diagnostic.tsv` (колонки `sys a b n condLocalMax condGlobal(k=0,n/2,n-1) pu`).
  */
 @Tag("fast")
 class ConditioningDiagnosticTest {
+    private val backend = Backends.default()
 
-    @Test
-    fun conditioningAndPartitionOfUnityOnRefinement() {
-        val backend = Backends.default()
-        val lines = ArrayList<String>()
-        lines += "sys\tn\tk\tcond\tpu"
-        val buildFailures = ArrayList<String>()
-        val puFailures = ArrayList<String>()
-        val configs = ArrayList<Pair<GeneratingSystem, Grid>>()
-        for (sys in listOf(GeneratingSystem.B, GeneratingSystem.H)) {
-            for (n in listOf(10, 100, 1000, 10000)) configs += sys to Grid.uniform(n, 0.0, 1.0)
+    private fun cond(m: DenseMatrix): Double = Conditioning.conditionEstimate(m, backend = backend).condInf
+
+    private fun partitionOfUnityDefect(basis: MinimalSplineBasis): Double {
+        val grid = basis.grid
+        val ones = DoubleArray(grid.n + 2) { 1.0 }
+        var pu = 0.0
+        for (i in 1..50) {
+            val t = grid.a + (grid.b - grid.a) * i / 51.0
+            pu = max(pu, abs(basis.evalSpline(ones, t) - 1.0))
         }
-        configs += GeneratingSystem.B to Grid.uniform(100, 100.0, 101.0)
-        for ((sys, grid) in configs) {
-            val n = grid.n
-            val a = grid.x(0); val b = grid.x(n)
-            val label = if (a == 0.0) sys.name else "${sys.name}[$a,$b]"
-            val basis = try { MinimalSplineBasis(sys, grid) } catch (e: Exception) {
-                val msg = "${e::class.simpleName}: ${e.message}"
-                lines += "$label\t$n\t-\t-\t-\t$msg"
-                buildFailures += "$label n=$n: $msg"
-                println("conditioning-diagnostic: $label n=$n НЕ ПОСТРОЕН: $msg")
-                continue
-            }
-            val ones = DoubleArray(n + 2) { 1.0 }
-            var pu = 0.0
-            for (i in 1..50) {
-                val t = a + (b - a) * i / 51.0
-                pu = max(pu, abs(basis.evalSpline(ones, t) - 1.0))
-            }
-            val conds = ArrayList<Double>()
-            for (k in listOf(0, n / 2, n - 1)) {
-                val cond = Conditioning.conditionEstimate(basis.approximationMatrix(k), backend = backend).condInf
-                conds += cond
-                lines += "$label\t$n\t$k\t${"%.3e".format(cond)}\t${"%.3e".format(pu)}"
-            }
-            println("conditioning-diagnostic: $label n=$n cond(k=0,n/2,n-1)=${conds.map { "%.2e".format(it) }} pu=${"%.2e".format(pu)}")
-            if (pu > 1e-6) puFailures += "$label n=$n: pu=$pu"
+        return pu
+    }
+
+    private fun maxLocalCond(basis: MinimalSplineBasis): Double =
+        (0 until basis.n).maxOf { cond(basis.localApproximationMatrix(it)) }
+
+    private fun globalConds(basis: MinimalSplineBasis): String =
+        listOf(0, basis.n / 2, basis.n - 1).joinToString(",") { k ->
+            try { "%.2e".format(cond(basis.approximationMatrix(k))) } catch (e: Exception) { "-" }
         }
-        val out = File("build/reports/conditioning-diagnostic.tsv")
+
+    private fun record(lines: MutableList<String>, sys: GeneratingSystem, grid: Grid): Pair<Double, Double> {
+        val basis = MinimalSplineBasis(sys, grid)
+        val condLocal = maxLocalCond(basis)
+        val pu = partitionOfUnityDefect(basis)
+        lines += "${sys.name}\t${grid.a}\t${grid.b}\t${grid.n}\t${"%.3e".format(condLocal)}\t${globalConds(basis)}\t${"%.3e".format(pu)}"
+        return condLocal to pu
+    }
+
+    private fun write(name: String, lines: List<String>) {
+        val out = File("build/reports/$name")
         out.parentFile.mkdirs()
         out.writeText(lines.joinToString("\n") + "\n")
-        assertTrue(puFailures.isEmpty(), "разбиение единицы нарушено: $puFailures")
-        if (buildFailures.isNotEmpty()) println("conditioning-diagnostic: не построены: $buildFailures")
-        // 1c: критерий достоверности — оценка числа обусловленности M_k, не превышающая
-        // MinimalSplineBasis.MAX_CONDITION. B на [100,101] отвергается с исключением о числе
-        // обусловленности (глобальные координаты порождающей системы); на [0,1] базис строится.
-        // Измерено (1c): cond(M_k) на [0,1] растёт как n²; при n = 10⁴ она равна ~3·10⁸ (B) и ~10⁹ (H),
-        // то есть превышает MAX_CONDITION = 10⁸, и базис в глобальных координатах не строится.
-        // Ожидается построение после перехода к локальным координатам (этап 1d); здесь фиксируется
-        // только то, что любой отказ вызван именно критерием обусловленности.
-        assertTrue(
-            buildFailures.all { it.contains("число обусловленности") },
-            "отказ построения не по числу обусловленности: $buildFailures",
+    }
+
+    /** cond(T_k M_k) на [0,1] не превышает 10³ и не растёт при измельчении: cond(n=10⁴)/cond(n=10) ≤ 10. */
+    @Test
+    fun localConditioningIsIndependentOfRefinement() {
+        val lines = arrayListOf("sys\ta\tb\tn\tcondLocalMax\tcondGlobal\tpu")
+        val failures = ArrayList<String>()
+        for (sys in listOf(GeneratingSystem.B, GeneratingSystem.H, GeneratingSystem.T)) {
+            val conds = LinkedHashMap<Int, Double>()
+            for (n in listOf(10, 100, 1000, 10000)) {
+                val (condLocal, pu) = record(lines, sys, Grid.uniform(n, 0.0, 1.0))
+                conds[n] = condLocal
+                if (condLocal > 1e3) failures += "${sys.name} n=$n: cond=$condLocal"
+                if (pu > 1e-9) failures += "${sys.name} n=$n: разбиение единицы pu=$pu"
+            }
+            val ratio = conds.getValue(10000) / conds.getValue(10)
+            if (ratio > 10.0) failures += "${sys.name}: cond растёт с n, cond(10⁴)/cond(10)=$ratio"
+        }
+        write("conditioning-diagnostic.tsv", lines)
+        assertTrue(failures.isEmpty(), "обусловленность в локальных координатах: $failures")
+    }
+
+    /** cond(T_k M_k) не зависит от положения и масштаба отрезка: B на [100,101], [0,10⁶], [0,10⁻⁶]; H на [100,101]. */
+    @Test
+    fun localConditioningIsIndependentOfSegment() {
+        val lines = arrayListOf("sys\ta\tb\tn\tcondLocalMax\tcondGlobal\tpu")
+        val failures = ArrayList<String>()
+        for ((a, b) in listOf(100.0 to 101.0, 0.0 to 1e6, 0.0 to 1e-6)) {
+            val (condLocal, pu) = record(lines, GeneratingSystem.B, Grid.uniform(100, a, b))
+            if (condLocal > 1e3) failures += "B[$a,$b]: cond=$condLocal"
+            if (pu > 1e-9) failures += "B[$a,$b]: разбиение единицы pu=$pu"
+        }
+        val (condH, puH) = record(lines, GeneratingSystem.H, Grid.uniform(100, 100.0, 101.0))
+        if (condH > 1e3) failures += "H[100,101]: cond=$condH"
+        if (puH > 1e-8) failures += "H[100,101]: разбиение единицы pu=$puH"
+        write("conditioning-diagnostic-segments.tsv", lines)
+        assertTrue(failures.isEmpty(), "обусловленность в локальных координатах: $failures")
+    }
+
+    /** При n = 10⁴ разбиение единицы и воспроизведение элемента span phi выполняются с точностью 10⁻⁹. */
+    @Test
+    fun fineGridReproducesGeneratingSpan() {
+        val cases = listOf(
+            Triple(GeneratingSystem.B, { t: Double -> t * t }, { t: Double -> 2.0 * t } to { _: Double -> 2.0 }),
+            Triple(GeneratingSystem.H, { t: Double -> cosh(t) }, { t: Double -> sinh(t) } to { t: Double -> cosh(t) }),
         )
-        assertTrue(
-            buildFailures.any { it.startsWith("B[100.0,101.0] n=100") },
-            "B на [100,101] должен отвергаться по числу обусловленности: $buildFailures",
-        )
-        val smallN = buildFailures.filter { f -> listOf(10, 100, 1000).any { f.contains(" n=$it:") } && !f.startsWith("B[") }
-        assertTrue(smallN.isEmpty(), "базис на [0,1] при n ≤ 10³ должен строиться: $smallN")
+        for ((sys, f, derivs) in cases) {
+            val grid = Grid.uniform(10000, 0.0, 1.0)
+            val basis = MinimalSplineBasis(sys, grid)
+            val pu = partitionOfUnityDefect(basis)
+            assertTrue(pu <= 1e-9, "${sys.name} n=10⁴: разбиение единицы pu=$pu")
+            val c = ProjFunctionals(basis).projectorCoeffs(f, derivs.first, derivs.second)
+            var err = 0.0
+            for (i in 0..50) {
+                val t = i / 50.0
+                err = max(err, abs(basis.evalSpline(c, t) - f(t)))
+            }
+            assertTrue(err <= 1e-9, "${sys.name} n=10⁴: погрешность на span phi $err")
+        }
     }
 }

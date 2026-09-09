@@ -5,43 +5,61 @@ import numerics.DenseMatrix
 import numerics.NumericsContext
 
 // ============================================================================
-// 5. БАЗИС МИНИМАЛЬНЫХ СПЛАЙНОВ (M_k^{-1} phi(t) через numerical-core)
+// 5. БАЗИС МИНИМАЛЬНЫХ СПЛАЙНОВ (M_k^{-1} phi(t) в локальных координатах интервала)
 // ============================================================================
 
 /**
  * Базис квадратичных минимальных сплайнов {omega_j}_{j=-2}^{n-1} на сетке с тройными краевыми узлами.
- * Значения на интервале (x_k, x_{k+1}) вычисляются как M_k^{-1} phi(t), где M_k = (a_{k-2}|a_{k-1}|a_k) —
- * матрица аппроксимационного соотношения; обратные матрицы вычисляются средствами numerical-core
- * в реализации BLAS/LAPACK из [ctx]. Достоверность обращения контролируется оценкой числа обусловленности M_k
- * (см. [MAX_CONDITION]); вырожденная или слишком плохо обусловленная матрица приводит к исключению при построении.
+ *
+ * На интервале (x_k, x_{k+1}) значения задаются аппроксимационным соотношением
+ * sum_j a_j omega_j(t) = phi(t), то есть omega(t) = M_k^{-1} phi(t), где M_k = (a_{k-2}|a_{k-1}|a_k).
+ * Вычисления ведутся в локальном представлении порождающей системы psi_k = T_k phi
+ * (см. [GeneratingSystem.localFrame]): левое умножение на невырожденную матрицу T_k даёт
+ * эквивалентную систему (T_k M_k) omega(t) = psi_k(t) с тем же решением, поэтому базисные
+ * функции от выбора представления не зависят. Столбцы T_k a_j вычисляются формулой [computeA],
+ * записанной для psi_k вместо phi: вектор a_j ковариантен относительно замены phi -> T phi
+ * (a_j^{T phi} = T a_j^{phi}), так как коэффициент при phi'(x_{j+1}) есть отношение двух скалярных
+ * произведений с одним и тем же вектором нормали и при линейной замене не меняется.
+ * Компоненты psi_k на интервале имеют порядок единицы, и число обусловленности T_k M_k не зависит
+ * ни от числа интервалов, ни от положения и масштаба отрезка.
+ *
+ * Обратные матрицы вычисляются средствами numerical-core в реализации BLAS/LAPACK из [ctx];
+ * достоверность обращения контролируется оценкой числа обусловленности T_k M_k (см. [MAX_CONDITION]):
+ * вырожденная или слишком плохо обусловленная матрица приводит к исключению при построении.
  */
 class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: NumericsContext = NumericsContext.default()) {
     companion object {
         /**
-         * Наибольшее допустимое число обусловленности матрицы аппроксимационного соотношения;
-         * при большем значении в обратной матрице сохраняется менее восьми значащих цифр,
-         * и базис считается вырожденным на данном интервале.
+         * Наибольшее допустимое число обусловленности матрицы аппроксимационного соотношения
+         * в локальных координатах интервала; при большем значении в обратной матрице сохраняется
+         * менее восьми значащих цифр, и базис считается вырожденным на данном интервале.
          */
         const val MAX_CONDITION = 1e8
     }
 
     val n = grid.n
 
-    // a_j: на (x_{j+1},x_{j+2}) предел при тройном узле a_j = phi(x_{j+1}).
-    private val aMin = -2
-    private val aMax = n - 1
-    private val aVec: Array<DoubleArray> = Array(aMax - aMin + 1) { k -> computeA(k + aMin) }
+    /** Локальные представления порождающей системы на интервалах (x_k, x_{k+1}), k = 0..n-1. */
+    private val frames: Array<LocalFrame> = Array(n) { k -> sys.localFrame(grid.x(k), grid.x(k + 1) - grid.x(k)) }
 
+    /** Обратные матрицы (T_k M_k)^{-1} по столбцам: элемент (slot, p) хранится в data[slot + 3 p]. */
     private val invM: Array<DoubleArray> = Array(n) { k -> invertApproximationMatrix(k, ctx) }
 
-    private fun a(j: Int): DoubleArray = aVec[j - aMin]
+    /** Матрица аппроксимационного соотношения M_k = (a_{k-2}|a_{k-1}|a_k) в глобальных координатах phi. */
+    internal fun approximationMatrix(k: Int): DenseMatrix {
+        val cols = Array(3) { j -> computeA(k - 2 + j) }
+        return DenseMatrix.build(3, 3) { i, j -> cols[j][i] }
+    }
 
-    /** Матрица аппроксимационного соотношения M_k = (a_{k-2}|a_{k-1}|a_k) на интервале (x_k, x_{k+1}). */
-    internal fun approximationMatrix(k: Int): DenseMatrix =
-        DenseMatrix.build(3, 3) { i, j -> a(k - 2 + j)[i] }
+    /** Матрица T_k M_k = (T_k a_{k-2}|T_k a_{k-1}|T_k a_k) в локальных координатах интервала k; именно она обращается. */
+    internal fun localApproximationMatrix(k: Int): DenseMatrix {
+        val frame = frames[k]
+        val cols = Array(3) { j -> computeA(k - 2 + j, frame.psi, frame.psiD) }
+        return DenseMatrix.build(3, 3) { i, j -> cols[j][i] }
+    }
 
     private fun invertApproximationMatrix(k: Int, ctx: NumericsContext): DoubleArray {
-        val m = approximationMatrix(k)
+        val m = localApproximationMatrix(k)
         val cond = Conditioning.conditionEstimate(m, ctx).valueOrNull()
             ?: throw IllegalArgumentException(
                 "Матрица аппроксимационного соотношения на интервале $k численно вырождена: " +
@@ -61,18 +79,28 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
     }
 
     /**
-     * Вектор a_j аппроксимационного соотношения на (x_{j+1}, x_{j+2}), j = -2..n-1.
+     * Вектор a_j аппроксимационного соотношения на (x_{j+1}, x_{j+2}), j = -2..n-1,
+     * в глобальных координатах phi.
      *
      * `internal`, а не `private`: тот же вектор a^N_j нужен семейству усредняющих
-     * функционалов mu (`AveragingFunctionals`), где раньше жила его дословная копия.
+     * функционалов mu (`AveragingFunctionals`).
      */
-    internal fun computeA(j: Int): DoubleArray {
+    internal fun computeA(j: Int): DoubleArray = computeA(j, sys::phi, sys::phiD)
+
+    /**
+     * Вектор a_j для порождающей вектор-функции [phi] с производной [phiD]: направляющий вектор
+     * пересечения плоскостей span{phi(x_{j+1}), phi'(x_{j+1})} и span{phi(x_{j+2}), phi'(x_{j+2})},
+     * нормированный условием a_j = phi(x_{j+1}) - coef phi'(x_{j+1}). Коэффициент coef — отношение
+     * скалярных произведений с общей нормалью phi(x_{j+2}) × phi'(x_{j+2}), поэтому при замене
+     * phi -> T phi вектор переходит в T a_j; это позволяет вычислять столбцы T_k M_k той же формулой.
+     */
+    private fun computeA(j: Int, phi: (Double) -> DoubleArray, phiD: (Double) -> DoubleArray): DoubleArray {
         val xj1 = grid.x(j + 1)
-        val phiJ1 = sys.phi(xj1)
+        val phiJ1 = phi(xj1)
         if (grid.isCoincident(j + 1)) return phiJ1 // тройной узел на краю: x_{j+1} = x_{j+2}
         val xj2 = grid.x(j + 2)
-        val phiDJ1 = sys.phiD(xj1)
-        val dJ2 = cross(sys.phi(xj2), sys.phiD(xj2))
+        val phiDJ1 = phiD(xj1)
+        val dJ2 = cross(phi(xj2), phiD(xj2))
         // Знаменатель — скалярное произведение, его масштаб задаёт сумма модулей
         // покомпонентных произведений (величина до взаимных сокращений). Абсолютный
         // порог здесь неприменим: denom ~ h, то есть зависит от масштаба отрезка.
@@ -89,7 +117,6 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
             phiJ1[2] - coef * phiDJ1[2],
         )
     }
-
     /**
      * Индекс сеточного интервала k с x_k <= t < x_{k+1} (для t=b возвращает n-1).
      *
@@ -149,10 +176,10 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      */
     fun interval(t: Double): Int = intervalOf(t)
 
-    /** Три активных значения omega_{k-2},omega_{k-1},omega_k в точке t (одно M_k^{-1} phi(t)). */
+    /** Три активных значения omega_{k-2},omega_{k-1},omega_k в точке t (одно (T_k M_k)^{-1} psi_k(t)). */
     fun activeOmega(k: Int, t: Double): DoubleArray {
         val inv = invM[k]
-        val p = sys.phi(t)
+        val p = frames[k].psi(t)
         return doubleArrayOf(
             inv[0] * p[0] + inv[3] * p[1] + inv[6] * p[2],
             inv[1] * p[0] + inv[4] * p[1] + inv[7] * p[2],
@@ -167,23 +194,23 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
         val slot = j - (k - 2)
         if (slot < 0 || slot > 2) return 0.0
         val inv = invM[k]
-        val phiT = sys.phi(t)
-        return inv[slot] * phiT[0] + inv[slot + 3] * phiT[1] + inv[slot + 6] * phiT[2]
+        val p = frames[k].psi(t)
+        return inv[slot] * p[0] + inv[slot + 3] * p[1] + inv[slot + 6] * p[2]
     }
 
-    /** Производная omega_j'(t) (phi заменяется на phi'). Нужна для xi-функционалов. */
+    /** Производная omega_j'(t) (psi_k заменяется на psi_k'). Нужна для xi-функционалов. */
     fun omegaDeriv(j: Int, t: Double): Double {
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
         if (slot < 0 || slot > 2) return 0.0
         val inv = invM[k]
-        val phiDT = sys.phiD(t)
-        return inv[slot] * phiDT[0] + inv[slot + 3] * phiDT[1] + inv[slot + 6] * phiDT[2]
+        val p = frames[k].psiD(t)
+        return inv[slot] * p[0] + inv[slot + 3] * p[1] + inv[slot + 6] * p[2]
     }
 
     /**
-     * Вторая производная omega_j''(t) (phi заменяется на phi''). Нужна для xi^<0>
+     * Вторая производная omega_j''(t) (psi_k заменяется на psi_k''). Нужна для xi^<0>
      * (де Бура--Фикса r=0). Кусочно-постоянна по слоям; в узлах сетки omega_j'' терпит
      * разрыв (omega_j in C^1 \ C^2), поэтому значение в узле берётся по правому куску.
      */
@@ -193,8 +220,8 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
         val slot = j - (k - 2)
         if (slot < 0 || slot > 2) return 0.0
         val inv = invM[k]
-        val phiDDT = sys.phiDD(t)
-        return inv[slot] * phiDDT[0] + inv[slot + 3] * phiDDT[1] + inv[slot + 6] * phiDDT[2]
+        val p = frames[k].psiDD(t)
+        return inv[slot] * p[0] + inv[slot + 3] * p[1] + inv[slot + 6] * p[2]
     }
 
     /**
@@ -217,7 +244,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
     fun evalSplineDeriv(c: DoubleArray, t: Double): Double {
         val k = intervalOf(t)
         val inv = invM[k]
-        val p = sys.phiD(t)
+        val p = frames[k].psiD(t)
         val w0 = inv[0] * p[0] + inv[3] * p[1] + inv[6] * p[2]
         val w1 = inv[1] * p[0] + inv[4] * p[1] + inv[7] * p[2]
         val w2 = inv[2] * p[0] + inv[5] * p[1] + inv[8] * p[2]
@@ -232,7 +259,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
     fun evalSplineDeriv2(c: DoubleArray, t: Double): Double {
         val k = intervalOf(t)
         val inv = invM[k]
-        val p = sys.phiDD(t)
+        val p = frames[k].psiDD(t)
         val w0 = inv[0] * p[0] + inv[3] * p[1] + inv[6] * p[2]
         val w1 = inv[1] * p[0] + inv[4] * p[1] + inv[7] * p[2]
         val w2 = inv[2] * p[0] + inv[5] * p[1] + inv[8] * p[2]

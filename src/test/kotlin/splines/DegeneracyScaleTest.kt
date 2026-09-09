@@ -1,6 +1,5 @@
 package splines
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,7 +35,6 @@ class DegeneracyScaleTest {
      * разбиение единицы `sum_j omega_j(t) = 1` (первая компонента phi равна 1).
      */
     @Test
-    @Disabled("глобальные координаты порождающей системы: cond(M_k) ~ 1e14 на [0,1e-6]; устраняется локальными координатами (этап 1d)")
     fun splineBasisBuildsOnTinyInterval() {
         val grid = Grid.uniform(8, 0.0, 1e-6)
         val basis = MinimalSplineBasis(GeneratingSystem.B, grid)
@@ -92,7 +90,6 @@ class DegeneracyScaleTest {
      * порождающей системы, а не порогов вырожденности.
      */
     @Test
-    @Disabled("глобальные координаты порождающей системы: cond(M_k) ~ 3e10 на [0,1e6]; устраняется локальными координатами (этап 1d)")
     fun splineBasisBuildsOnHugeInterval() {
         for (sys in listOf(GeneratingSystem.B, GeneratingSystem.T)) {
             val grid = Grid.uniform(8, 0.0, 1e6)

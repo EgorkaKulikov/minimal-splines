@@ -180,22 +180,6 @@ class SupportPointsTest {
         "lambda" to ThreePointFunctionals(basis),
     )
 
-    /**
-     * Строит базис либо пропускает сетку, если M_k отвергнута по числу обусловленности.
-     * В глобальных координатах порождающей системы на отрезке [0,1000] cond(M_k) превышает
-     * [MinimalSplineBasis.MAX_CONDITION] уже при n = 8; устраняется локальными координатами (этап 1d).
-     * Пропуск допускается только для сеток на [0,1000]; любой иной отказ — ошибка теста.
-     */
-    private fun basisOrSkip(grid: Grid, gridName: String, skipped: MutableList<String>): MinimalSplineBasis? =
-        try {
-            MinimalSplineBasis(GeneratingSystem.B, grid)
-        } catch (e: IllegalArgumentException) {
-            val expected = gridName.endsWith("[0.0,1000.0]") && (e.message ?: "").contains("число обусловленности")
-            if (!expected) throw AssertionError("неожиданный отказ построения базиса на $gridName: ${e.message}", e)
-            skipped += gridName
-            null
-        }
-
     private fun grids(): List<Pair<String, Grid>> {
         val out = ArrayList<Pair<String, Grid>>()
         for (n in listOf(8, 16, 33)) {
@@ -215,9 +199,8 @@ class SupportPointsTest {
     /** Фредгольм и Вольтерра: тот же набор и тот же порядок, что давал `sortedSetOf`. */
     @Test
     fun reproducesLegacySortedSetExactly() {
-        val skipped = ArrayList<String>()
         for ((gridName, grid) in grids()) {
-            val basis = basisOrSkip(grid, gridName, skipped) ?: continue
+            val basis = MinimalSplineBasis(GeneratingSystem.B, grid)
             for ((familyName, family) in families(basis)) {
                 val vfs = valueFunctionals(family, grid.n)
                 val legacy = sortedSetOf<Double>().apply { for (vf in vfs) for (s in vf.nodes) add(s) }
@@ -232,9 +215,8 @@ class SupportPointsTest {
     /** Урысон: тот же набор и тот же ПОРЯДОК ВСТАВКИ, что давал `LinkedHashSet`. */
     @Test
     fun reproducesLegacyLinkedHashSetExactly() {
-        val skipped = ArrayList<String>()
         for ((gridName, grid) in grids()) {
-            val basis = basisOrSkip(grid, gridName, skipped) ?: continue
+            val basis = MinimalSplineBasis(GeneratingSystem.B, grid)
             for ((familyName, family) in families(basis)) {
                 val vfs = valueFunctionals(family, grid.n)
                 val legacy = LinkedHashSet<Double>().apply { for (vf in vfs) for (s in vf.nodes) add(s) }
