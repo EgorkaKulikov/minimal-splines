@@ -1,0 +1,201 @@
+{
+  "generatedWith": {
+    "version": "0.1.0",
+    "backend": "netlib JNILAPACK (нативная BLAS/LAPACK системы)",
+    "date": "2026-09-09T14:55:47.279209Z"
+  },
+  "grids": {
+    "uniform-1": {
+      "n": 1,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3ff0000000000000",
+      "breakpoints": ["0000000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "quasiUniform-1": {
+      "n": 1,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3ff0000000000000",
+      "breakpoints": ["0000000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "uniform-2": {
+      "n": 2,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fe0000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fe0000000000000",
+      "breakpoints": ["0000000000000000", "3fe0000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "quasiUniform-2": {
+      "n": 2,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fe0000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fe0000000000000",
+      "breakpoints": ["0000000000000000", "3fe0000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "geometric-2": {
+      "n": 2,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fd5555555555555", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fe5555555555556",
+      "breakpoints": ["0000000000000000", "3fd5555555555555", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "graded-2": {
+      "n": 2,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fd5555555555555", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fe5555555555556",
+      "breakpoints": ["0000000000000000", "3fd5555555555555", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "uniform-4": {
+      "n": 4,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fd0000000000000", "3fe0000000000000", "3fe8000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fd0000000000000",
+      "breakpoints": ["0000000000000000", "3fd0000000000000", "3fe0000000000000", "3fe8000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "quasiUniform-4": {
+      "n": 4,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fd28f5c28f5c28f", "3fe0000000000000", "3fe6b851eb851eb8", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fd28f5c28f5c290",
+      "breakpoints": ["0000000000000000", "3fd28f5c28f5c28f", "3fe0000000000000", "3fe6b851eb851eb8", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "geometric-4": {
+      "n": 4,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fc5e3eecaa63c43", "3fd8bc390b179248", "3fe50e089aace1df", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fd5e3eecaa63c42",
+      "breakpoints": ["0000000000000000", "3fc5e3eecaa63c43", "3fd8bc390b179248", "3fe50e089aace1df", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "graded-4": {
+      "n": 4,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fc5555555555555", "3fe0000000000000", "3fe5555555555555", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fd5555555555556",
+      "breakpoints": ["0000000000000000", "3fc5555555555555", "3fe0000000000000", "3fe5555555555555", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "uniform-8": {
+      "n": 8,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fc0000000000000", "3fd0000000000000", "3fd8000000000000", "3fe0000000000000", "3fe4000000000000", "3fe8000000000000", "3fec000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fc0000000000000",
+      "breakpoints": ["0000000000000000", "3fc0000000000000", "3fd0000000000000", "3fd8000000000000", "3fe0000000000000", "3fe4000000000000", "3fe8000000000000", "3fec000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "quasiUniform-8": {
+      "n": 8,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fc39ed1a9ffe09c", "3fd28f5c28f5c28f", "3fd9cf68d4fff04e", "3fe0000000000000", "3fe3184b958007d9", "3fe6b851eb851eb8", "3feb184b958007d9", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fc39ed1a9ffe09c",
+      "breakpoints": ["0000000000000000", "3fc39ed1a9ffe09c", "3fd28f5c28f5c28f", "3fd9cf68d4fff04e", "3fe0000000000000", "3fe3184b958007d9", "3fe6b851eb851eb8", "3feb184b958007d9", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "geometric-8": {
+      "n": 8,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fb60e3111b8bfeb", "3fc7340bdd9009e4", "3fd252b828182380", "3fd9be85a05b6938", "3fe0f8097cec1f32", "3fe57dfacf66ecca", "3fea7c73bb91d007", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fc60e3111b8bfe4",
+      "breakpoints": ["0000000000000000", "3fb60e3111b8bfeb", "3fc7340bdd9009e4", "3fd252b828182380", "3fd9be85a05b6938", "3fe0f8097cec1f32", "3fe57dfacf66ecca", "3fea7c73bb91d007", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "graded-8": {
+      "n": 8,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fb5555555555555", "3fd0000000000000", "3fd5555555555555", "3fe0000000000000", "3fe2aaaaaaaaaaab", "3fe8000000000000", "3feaaaaaaaaaaaab", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fc5555555555556",
+      "breakpoints": ["0000000000000000", "3fb5555555555555", "3fd0000000000000", "3fd5555555555555", "3fe0000000000000", "3fe2aaaaaaaaaaab", "3fe8000000000000", "3feaaaaaaaaaaaab", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "uniform-16": {
+      "n": 16,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fb0000000000000", "3fc0000000000000", "3fc8000000000000", "3fd0000000000000", "3fd4000000000000", "3fd8000000000000", "3fdc000000000000", "3fe0000000000000", "3fe2000000000000", "3fe4000000000000", "3fe6000000000000", "3fe8000000000000", "3fea000000000000", "3fec000000000000", "3fee000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fb0000000000000",
+      "breakpoints": ["0000000000000000", "3fb0000000000000", "3fc0000000000000", "3fc8000000000000", "3fd0000000000000", "3fd4000000000000", "3fd8000000000000", "3fdc000000000000", "3fe0000000000000", "3fe2000000000000", "3fe4000000000000", "3fe6000000000000", "3fe8000000000000", "3fea000000000000", "3fec000000000000", "3fee000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "quasiUniform-16": {
+      "n": 16,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fb3eb2e8111b4b4", "3fc39ed1a9ffe09c", "3fccbaf2878d3553", "3fd28f5c28f5c28f", "3fd65d7943c69aaa", "3fd9cf68d4fff04e", "3fdcfacba0446d2d", "3fe0000000000000", "3fe1829a2fddc96a", "3fe3184b958007d9", "3fe4d1435e1cb2ab", "3fe6b851eb851eb8", "3fe8d1435e1cb2ab", "3feb184b958007d9", "3fed829a2fddc969", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fb3eb2e8111b4b8",
+      "breakpoints": ["0000000000000000", "3fb3eb2e8111b4b4", "3fc39ed1a9ffe09c", "3fccbaf2878d3553", "3fd28f5c28f5c28f", "3fd65d7943c69aaa", "3fd9cf68d4fff04e", "3fdcfacba0446d2d", "3fe0000000000000", "3fe1829a2fddc96a", "3fe3184b958007d9", "3fe4d1435e1cb2ab", "3fe6b851eb851eb8", "3fe8d1435e1cb2ab", "3feb184b958007d9", "3fed829a2fddc969", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "geometric-16": {
+      "n": 16,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fa61f41f5fc7018", "3fb6a52d53e4b374", "3fc1637d38c6a38b", "3fc7bdd534ce079b", "3fce6517d0759b4b", "3fd2ae7425f7d9e9", "3fd6548af92e21d2", "3fda26cf1782de95", "3fde27575deb03b6", "3fe12c29fa8d364b", "3fe35e07c1e3d063", "3fe5aa7837b5d0ef", "3fe812bd16169099", "3fea98274e576379", "3fed3c17c14071fd", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fb61f41f5fc7018",
+      "breakpoints": ["0000000000000000", "3fa61f41f5fc7018", "3fb6a52d53e4b374", "3fc1637d38c6a38b", "3fc7bdd534ce079b", "3fce6517d0759b4b", "3fd2ae7425f7d9e9", "3fd6548af92e21d2", "3fda26cf1782de95", "3fde27575deb03b6", "3fe12c29fa8d364b", "3fe35e07c1e3d063", "3fe5aa7837b5d0ef", "3fe812bd16169099", "3fea98274e576379", "3fed3c17c14071fd", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "graded-16": {
+      "n": 16,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fa5555555555555", "3fc0000000000000", "3fc5555555555555", "3fd0000000000000", "3fd2aaaaaaaaaaab", "3fd8000000000000", "3fdaaaaaaaaaaaab", "3fe0000000000000", "3fe1555555555555", "3fe4000000000000", "3fe5555555555555", "3fe8000000000000", "3fe9555555555555", "3fec000000000000", "3fed555555555555", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fb5555555555558",
+      "breakpoints": ["0000000000000000", "3fa5555555555555", "3fc0000000000000", "3fc5555555555555", "3fd0000000000000", "3fd2aaaaaaaaaaab", "3fd8000000000000", "3fdaaaaaaaaaaaab", "3fe0000000000000", "3fe1555555555555", "3fe4000000000000", "3fe5555555555555", "3fe8000000000000", "3fe9555555555555", "3fec000000000000", "3fed555555555555", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "uniform-32": {
+      "n": 32,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fa0000000000000", "3fb0000000000000", "3fb8000000000000", "3fc0000000000000", "3fc4000000000000", "3fc8000000000000", "3fcc000000000000", "3fd0000000000000", "3fd2000000000000", "3fd4000000000000", "3fd6000000000000", "3fd8000000000000", "3fda000000000000", "3fdc000000000000", "3fde000000000000", "3fe0000000000000", "3fe1000000000000", "3fe2000000000000", "3fe3000000000000", "3fe4000000000000", "3fe5000000000000", "3fe6000000000000", "3fe7000000000000", "3fe8000000000000", "3fe9000000000000", "3fea000000000000", "3feb000000000000", "3fec000000000000", "3fed000000000000", "3fee000000000000", "3fef000000000000", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fa0000000000000",
+      "breakpoints": ["0000000000000000", "3fa0000000000000", "3fb0000000000000", "3fb8000000000000", "3fc0000000000000", "3fc4000000000000", "3fc8000000000000", "3fcc000000000000", "3fd0000000000000", "3fd2000000000000", "3fd4000000000000", "3fd6000000000000", "3fd8000000000000", "3fda000000000000", "3fdc000000000000", "3fde000000000000", "3fe0000000000000", "3fe1000000000000", "3fe2000000000000", "3fe3000000000000", "3fe4000000000000", "3fe5000000000000", "3fe6000000000000", "3fe7000000000000", "3fe8000000000000", "3fe9000000000000", "3fea000000000000", "3feb000000000000", "3fec000000000000", "3fed000000000000", "3fee000000000000", "3fef000000000000", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "quasiUniform-32": {
+      "n": 32,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fa3fed5cc39dd20", "3fb3eb2e8111b4b4", "3fbdb064df420d0d", "3fc39ed1a9ffe09c", "3fc841d2e7d9618b", "3fccbaf2878d3553", "3fd082c477098c89", "3fd28f5c28f5c28f", "3fd482c477098c89", "3fd65d7943c69aaa", "3fd820e973ecb0c6", "3fd9cf68d4fff04e", "3fdb6c1937d08343", "3fdcfacba0446d2d", "3fde7fdab9873ba4", "3fe0000000000000", "3fe0c012a33c622e", "3fe1829a2fddc96a", "3fe249f36417be5e", "3fe3184b958007d9", "3fe3ef8b4609a79d", "3fe4d1435e1cb2ab", "3fe5be9dc47b39bc", "3fe6b851eb851eb8", "3fe7be9dc47b39bc", "3fe8d1435e1cb2ab", "3fe9ef8b4609a79d", "3feb184b958007d9", "3fec49f36417be5e", "3fed829a2fddc969", "3feec012a33c622e", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fa3fed5cc39dd20",
+      "breakpoints": ["0000000000000000", "3fa3fed5cc39dd20", "3fb3eb2e8111b4b4", "3fbdb064df420d0d", "3fc39ed1a9ffe09c", "3fc841d2e7d9618b", "3fccbaf2878d3553", "3fd082c477098c89", "3fd28f5c28f5c28f", "3fd482c477098c89", "3fd65d7943c69aaa", "3fd820e973ecb0c6", "3fd9cf68d4fff04e", "3fdb6c1937d08343", "3fdcfacba0446d2d", "3fde7fdab9873ba4", "3fe0000000000000", "3fe0c012a33c622e", "3fe1829a2fddc96a", "3fe249f36417be5e", "3fe3184b958007d9", "3fe3ef8b4609a79d", "3fe4d1435e1cb2ab", "3fe5be9dc47b39bc", "3fe6b851eb851eb8", "3fe7be9dc47b39bc", "3fe8d1435e1cb2ab", "3fe9ef8b4609a79d", "3feb184b958007d9", "3fec49f36417be5e", "3fed829a2fddc969", "3feec012a33c622e", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "geometric-32": {
+      "n": 32,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3f9626fe5a215a1f", "3fa6671bb4055118", "3fb0fe245b0031f0", "3fb6ea40dc37ad42", "3fbcf8a56acf0db4", "3fc1950c3b98e851", "3fc4bfb2773b8a0d", "3fc7fcad2a2d59ad", "3fcb4c666ee65dc5", "3fceaf4ac60d4f8e", "3fd112e4922d68b1", "3fd2d82980668410", "3fd4a7ae3196b4ea", "3fd681adf9754e53", "3fd8666583242698", "3fda5612d8f376d2", "3fdc50f56c52ad53", "3fde574e1def3729", "3fe034afa3012555", "3fe143b65e6761a8", "3fe258ddf1a81272", "3fe37449d60df15e", "3fe4961e523b06f9", "3fe5be807ecd49ed", "3fe6ed964b1e1ec1", "3fe82386821d5373", "3fe96078cf483622", "3feaa495c3bd697a", "3febf006db6e1d30", "3fed42f6826d54c1", "3fee9d901a5dea5e", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fa626fe5a215a20",
+      "breakpoints": ["0000000000000000", "3f9626fe5a215a1f", "3fa6671bb4055118", "3fb0fe245b0031f0", "3fb6ea40dc37ad42", "3fbcf8a56acf0db4", "3fc1950c3b98e851", "3fc4bfb2773b8a0d", "3fc7fcad2a2d59ad", "3fcb4c666ee65dc5", "3fceaf4ac60d4f8e", "3fd112e4922d68b1", "3fd2d82980668410", "3fd4a7ae3196b4ea", "3fd681adf9754e53", "3fd8666583242698", "3fda5612d8f376d2", "3fdc50f56c52ad53", "3fde574e1def3729", "3fe034afa3012555", "3fe143b65e6761a8", "3fe258ddf1a81272", "3fe37449d60df15e", "3fe4961e523b06f9", "3fe5be807ecd49ed", "3fe6ed964b1e1ec1", "3fe82386821d5373", "3fe96078cf483622", "3feaa495c3bd697a", "3febf006db6e1d30", "3fed42f6826d54c1", "3fee9d901a5dea5e", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "graded-32": {
+      "n": 32,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3f95555555555555", "3fb0000000000000", "3fb5555555555555", "3fc0000000000000", "3fc2aaaaaaaaaaab", "3fc8000000000000", "3fcaaaaaaaaaaaab", "3fd0000000000000", "3fd1555555555555", "3fd4000000000000", "3fd5555555555555", "3fd8000000000000", "3fd9555555555555", "3fdc000000000000", "3fdd555555555555", "3fe0000000000000", "3fe0aaaaaaaaaaab", "3fe2000000000000", "3fe2aaaaaaaaaaab", "3fe4000000000000", "3fe4aaaaaaaaaaab", "3fe6000000000000", "3fe6aaaaaaaaaaab", "3fe8000000000000", "3fe8aaaaaaaaaaab", "3fea000000000000", "3feaaaaaaaaaaaab", "3fec000000000000", "3fecaaaaaaaaaaab", "3fee000000000000", "3feeaaaaaaaaaaab", "3ff0000000000000", "3ff0000000000000", "3ff0000000000000"],
+      "h": "3fa5555555555558",
+      "breakpoints": ["0000000000000000", "3f95555555555555", "3fb0000000000000", "3fb5555555555555", "3fc0000000000000", "3fc2aaaaaaaaaaab", "3fc8000000000000", "3fcaaaaaaaaaaaab", "3fd0000000000000", "3fd1555555555555", "3fd4000000000000", "3fd5555555555555", "3fd8000000000000", "3fd9555555555555", "3fdc000000000000", "3fdd555555555555", "3fe0000000000000", "3fe0aaaaaaaaaaab", "3fe2000000000000", "3fe2aaaaaaaaaaab", "3fe4000000000000", "3fe4aaaaaaaaaaab", "3fe6000000000000", "3fe6aaaaaaaaaaab", "3fe8000000000000", "3fe8aaaaaaaaaaab", "3fea000000000000", "3feaaaaaaaaaaaab", "3fec000000000000", "3fecaaaaaaaaaaab", "3fee000000000000", "3feeaaaaaaaaaaab", "3ff0000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cd203af9ee75616"
+    },
+    "uniform-8-wide": {
+      "n": 8,
+      "x": ["bff8000000000000", "bff8000000000000", "bff8000000000000", "bff0000000000000", "bfe0000000000000", "0000000000000000", "3fe0000000000000", "3ff0000000000000", "3ff8000000000000", "4000000000000000", "4004000000000000", "4004000000000000", "4004000000000000"],
+      "h": "3fe0000000000000",
+      "breakpoints": ["bff8000000000000", "bff0000000000000", "bfe0000000000000", "0000000000000000", "3fe0000000000000", "3ff0000000000000", "3ff8000000000000", "4000000000000000", "4004000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3cf203af9ee75616"
+    },
+    "uniform-8-T": {
+      "n": 8,
+      "x": ["0000000000000000", "0000000000000000", "0000000000000000", "3fd0000000000000", "3fe0000000000000", "3fe8000000000000", "3ff0000000000000", "3ff4000000000000", "3ff8000000000000", "3ffc000000000000", "4000000000000000", "4000000000000000", "4000000000000000"],
+      "h": "3fd0000000000000",
+      "breakpoints": ["0000000000000000", "3fd0000000000000", "3fe0000000000000", "3fe8000000000000", "3ff0000000000000", "3ff4000000000000", "3ff8000000000000", "3ffc000000000000", "4000000000000000"],
+      "isCoincident": [true, true, false, false, false, false, false, false, false, false, true, true],
+      "breakpointInclusionEps": "3ce203af9ee75616"
+    }
+  }
+}

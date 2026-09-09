@@ -56,8 +56,22 @@ java {
 val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags("golden-generate") }
     systemProperty("numerics.backend", numericsBackend)
+}
+
+// Формирование эталонов поведения (src/test/resources/golden, см. README.md там же).
+// Выполняется только по явному запросу; в `test` и `fastTest` тег golden-generate исключён.
+tasks.register<Test>("regenerateGolden") {
+    group = "verification"
+    description = "Перегенерировать golden-эталоны в src/test/resources/golden"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform { includeTags("golden-generate") }
+    systemProperty("golden.dir", layout.projectDirectory.dir("src/test/resources/golden").asFile.absolutePath)
+    systemProperty("golden.version", project.version.toString())
+    systemProperty("numerics.backend", numericsBackend)
+    outputs.upToDateWhen { false }
 }
 
 /** Быстрый набор (тег `fast`); в этой библиотеке совпадает с `test` по составу. */
@@ -66,7 +80,7 @@ tasks.register<Test>("fastTest") {
     description = "Быстрый набор тестов (тег fast)"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
-    useJUnitPlatform { includeTags("fast") }
+    useJUnitPlatform { includeTags("fast"); excludeTags("golden-generate") }
     systemProperty("numerics.backend", numericsBackend)
 }
 
@@ -74,6 +88,7 @@ kover {
     currentProject {
         instrumentation {
             disabledForTestTasks.add("fastTest")
+            disabledForTestTasks.add("regenerateGolden")
         }
     }
 }
