@@ -1,18 +1,20 @@
 package splines
 
+import numerics.Conditioning
+import numerics.DenseMatrix
+import numerics.NumericsContext
+
 // ============================================================================
-// 5. БАЗИС МИНИМАЛЬНЫХ СПЛАЙНОВ (устойчивое построение M_k^{-1} phi(t))
+// 5. БАЗИС МИНИМАЛЬНЫХ СПЛАЙНОВ (M_k^{-1} phi(t) через numerical-core)
 // ============================================================================
 
 /**
- * Базис квадратичных минимальных B_phi-сплайнов {omega_j}_{j=-2}^{n-1} на сетке
- * (net) для порождающей phi. На интервале (x_k,x_{k+1}) три активных сплайна
- * omega_{k-2},omega_{k-1},omega_k удовлетворяют соотношениям воспроизведения
- *   a_{k-2} omega_{k-2}(t) + a_{k-1} omega_{k-1}(t) + a_k omega_k(t) = phi(t),
- * откуда (omega) = M_k^{-1} phi(t), M_k = (a_{k-2}|a_{k-1}|a_k). Устойчиво при
- * тройных краевых узлах (где явная формула через d_j = phi_j x phi'_j вырождается).
+ * Базис квадратичных минимальных сплайнов {omega_j}_{j=-2}^{n-1} на сетке с тройными краевыми узлами.
+ * Значения на интервале (x_k, x_{k+1}) вычисляются как M_k^{-1} phi(t), где M_k = (a_{k-2}|a_{k-1}|a_k) —
+ * матрица аппроксимационного соотношения; обратные матрицы вычисляются средствами numerical-core
+ * в реализации BLAS/LAPACK из [ctx]. Вырожденность или недостоверность обращения приводит к исключению при построении.
  */
-class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
+class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: NumericsContext = NumericsContext.default()) {
     val n = grid.n
 
     // a_j: на (x_{j+1},x_{j+2}) предел при тройном узле a_j = phi(x_{j+1}).
@@ -20,9 +22,24 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
     private val aMax = n - 1
     private val aVec: Array<DoubleArray> = Array(aMax - aMin + 1) { k -> computeA(k + aMin) }
 
-    private val invM: Array<Array<DoubleArray>> = Array(n) { k -> invert3(a(k - 2), a(k - 1), a(k)) }
+    private val invM: Array<DoubleArray> = Array(n) { k -> invertApproximationMatrix(k, ctx) }
 
     private fun a(j: Int): DoubleArray = aVec[j - aMin]
+
+    /** Матрица аппроксимационного соотношения M_k = (a_{k-2}|a_{k-1}|a_k) на интервале (x_k, x_{k+1}). */
+    internal fun approximationMatrix(k: Int): DenseMatrix =
+        DenseMatrix.build(3, 3) { i, j -> a(k - 2 + j)[i] }
+
+    private fun invertApproximationMatrix(k: Int, ctx: NumericsContext): DoubleArray {
+        val m = approximationMatrix(k)
+        val inv = Conditioning.inverse(m, ctx.backend)
+            ?: throw IllegalArgumentException("Матрица аппроксимационного соотношения на интервале $k вырождена")
+        val residual = Conditioning.inversionResidual(m, inv, ctx.backend)
+        require(residual <= Conditioning.INVERSION_RESIDUAL_TOLERANCE) {
+            "Матрица аппроксимационного соотношения на интервале $k плохо обусловлена: невязка обращения $residual"
+        }
+        return inv.data
+    }
 
     /**
      * Вектор a_j аппроксимационного соотношения на (x_{j+1}, x_{j+2}), j = -2..n-1.
@@ -36,17 +53,17 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         if (grid.isCoincident(j + 1)) return phiJ1 // тройной узел на краю: x_{j+1} = x_{j+2}
         val xj2 = grid.x(j + 2)
         val phiDJ1 = sys.phiD(xj1)
-        val dJ2 = cross3(sys.phi(xj2), sys.phiD(xj2))
+        val dJ2 = cross(sys.phi(xj2), sys.phiD(xj2))
         // Знаменатель — скалярное произведение, его масштаб задаёт сумма модулей
         // покомпонентных произведений (величина до взаимных сокращений). Абсолютный
         // порог здесь неприменим: denom ~ h, то есть зависит от масштаба отрезка.
-        val denom = dot3(dJ2, phiDJ1)
+        val denom = dot(dJ2, phiDJ1)
         val denomScale = dot3Scale(dJ2, phiDJ1)
         require(isSignificant(denom, denomScale)) {
-            "computeA(j=$j): degenerate approximation relation, dot3(dJ2, phiDJ1)=$denom, " +
+            "computeA(j=$j): degenerate approximation relation, dot(dJ2, phiDJ1)=$denom, " +
                 "scale=$denomScale (значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
-        val coef = dot3(dJ2, phiJ1) / denom
+        val coef = dot(dJ2, phiJ1) / denom
         return doubleArrayOf(
             phiJ1[0] - coef * phiDJ1[0],
             phiJ1[1] - coef * phiDJ1[1],
@@ -118,9 +135,9 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         val inv = invM[k]
         val p = sys.phi(t)
         return doubleArrayOf(
-            inv[0][0] * p[0] + inv[0][1] * p[1] + inv[0][2] * p[2],
-            inv[1][0] * p[0] + inv[1][1] * p[1] + inv[1][2] * p[2],
-            inv[2][0] * p[0] + inv[2][1] * p[1] + inv[2][2] * p[2],
+            inv[0] * p[0] + inv[3] * p[1] + inv[6] * p[2],
+            inv[1] * p[0] + inv[4] * p[1] + inv[7] * p[2],
+            inv[2] * p[0] + inv[5] * p[1] + inv[8] * p[2],
         )
     }
 
@@ -132,7 +149,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         if (slot < 0 || slot > 2) return 0.0
         val inv = invM[k]
         val phiT = sys.phi(t)
-        return inv[slot][0] * phiT[0] + inv[slot][1] * phiT[1] + inv[slot][2] * phiT[2]
+        return inv[slot] * phiT[0] + inv[slot + 3] * phiT[1] + inv[slot + 6] * phiT[2]
     }
 
     /** Производная omega_j'(t) (phi заменяется на phi'). Нужна для xi-функционалов. */
@@ -143,7 +160,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         if (slot < 0 || slot > 2) return 0.0
         val inv = invM[k]
         val phiDT = sys.phiD(t)
-        return inv[slot][0] * phiDT[0] + inv[slot][1] * phiDT[1] + inv[slot][2] * phiDT[2]
+        return inv[slot] * phiDT[0] + inv[slot + 3] * phiDT[1] + inv[slot + 6] * phiDT[2]
     }
 
     /**
@@ -158,7 +175,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         if (slot < 0 || slot > 2) return 0.0
         val inv = invM[k]
         val phiDDT = sys.phiDD(t)
-        return inv[slot][0] * phiDDT[0] + inv[slot][1] * phiDDT[1] + inv[slot][2] * phiDDT[2]
+        return inv[slot] * phiDDT[0] + inv[slot + 3] * phiDDT[1] + inv[slot + 6] * phiDDT[2]
     }
 
     /**
@@ -182,9 +199,9 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         val k = intervalOf(t)
         val inv = invM[k]
         val p = sys.phiD(t)
-        val w0 = inv[0][0] * p[0] + inv[0][1] * p[1] + inv[0][2] * p[2]
-        val w1 = inv[1][0] * p[0] + inv[1][1] * p[1] + inv[1][2] * p[2]
-        val w2 = inv[2][0] * p[0] + inv[2][1] * p[1] + inv[2][2] * p[2]
+        val w0 = inv[0] * p[0] + inv[3] * p[1] + inv[6] * p[2]
+        val w1 = inv[1] * p[0] + inv[4] * p[1] + inv[7] * p[2]
+        val w2 = inv[2] * p[0] + inv[5] * p[1] + inv[8] * p[2]
         return c[k] * w0 + c[k + 1] * w1 + c[k + 2] * w2
     }
 
@@ -197,9 +214,9 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid) {
         val k = intervalOf(t)
         val inv = invM[k]
         val p = sys.phiDD(t)
-        val w0 = inv[0][0] * p[0] + inv[0][1] * p[1] + inv[0][2] * p[2]
-        val w1 = inv[1][0] * p[0] + inv[1][1] * p[1] + inv[1][2] * p[2]
-        val w2 = inv[2][0] * p[0] + inv[2][1] * p[1] + inv[2][2] * p[2]
+        val w0 = inv[0] * p[0] + inv[3] * p[1] + inv[6] * p[2]
+        val w1 = inv[1] * p[0] + inv[4] * p[1] + inv[7] * p[2]
+        val w2 = inv[2] * p[0] + inv[5] * p[1] + inv[8] * p[2]
         return c[k] * w0 + c[k + 1] * w1 + c[k + 2] * w2
     }
 }
@@ -262,3 +279,13 @@ object ReferenceSplines {
 /** Узлы x_j..x_{j+3} различны (нет слияния кратных узлов). */
 fun nonDegenerate(grid: Grid, j: Int): Boolean =
     grid.x(j) < grid.x(j + 1) && grid.x(j + 1) < grid.x(j + 2) && grid.x(j + 2) < grid.x(j + 3)
+
+/** Векторное произведение u x v в R^3 — локальная арифметика построения a_j. */
+private fun cross(u: DoubleArray, v: DoubleArray): DoubleArray = doubleArrayOf(
+    u[1] * v[2] - u[2] * v[1],
+    u[2] * v[0] - u[0] * v[2],
+    u[0] * v[1] - u[1] * v[0],
+)
+
+/** Скалярное произведение в R^3. */
+private fun dot(u: DoubleArray, v: DoubleArray): Double = u[0] * v[0] + u[1] * v[1] + u[2] * v[2]

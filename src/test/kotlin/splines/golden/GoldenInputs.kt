@@ -99,16 +99,6 @@ object GoldenInputs {
     /** Коэффициенты сплайна длины n+2: c_j = sin(1.7 j + 0.3). */
     fun coeffs(n: Int): DoubleArray = DoubleArray(n + 2) { sin(1.7 * it + 0.3) }
 
-    /** Пять фиксированных троек 3-векторов для алгебры (последняя — почти вырожденная). */
-    val triples: List<Array<DoubleArray>> = listOf(
-        arrayOf(doubleArrayOf(1.0, 0.0, 0.0), doubleArrayOf(0.0, 1.0, 0.0), doubleArrayOf(0.0, 0.0, 1.0)),
-        arrayOf(doubleArrayOf(1.0, 2.0, 3.0), doubleArrayOf(-4.0, 5.5, 0.25), doubleArrayOf(0.125, -7.0, 2.0)),
-        arrayOf(doubleArrayOf(0.3, -0.7, 1.9), doubleArrayOf(2.2, 0.1, -0.4), doubleArrayOf(-1.1, 3.3, 0.6)),
-        arrayOf(doubleArrayOf(1e3, -2e-3, 5.0), doubleArrayOf(7.0, 1e-2, -3e2), doubleArrayOf(-0.5, 4e2, 9e-4)),
-        // Почти вырожденная: третий вектор = первый + второй + малое возмущение.
-        arrayOf(doubleArrayOf(1.0, 2.0, 3.0), doubleArrayOf(2.0, -1.0, 0.5), doubleArrayOf(3.0, 1.0, 3.5 + 1e-7)),
-    )
-
     /** 20 точек на [-0.5, 2] для phi/phiD/phiDD/wronskian. */
     val phiPoints: DoubleArray = DoubleArray(20) { -0.5 + 2.5 * (it + 0.5) / 20.0 }
 }

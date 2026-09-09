@@ -27,7 +27,12 @@ class GeneratingSystem(
     fun phiDD(t: Double): DoubleArray = doubleArrayOf(0.0, rhoDD(t), sigmaDD(t))
 
     /** Вронскиан det(phi, phi', phi'') — проверка невырожденности. */
-    fun wronskian(t: Double): Double = det3(phi(t), phiD(t), phiDD(t))
+    fun wronskian(t: Double): Double {
+        val a = phi(t); val b = phiD(t); val c = phiDD(t)
+        return a[0] * (b[1] * c[2] - b[2] * c[1]) +
+            a[1] * (b[2] * c[0] - b[0] * c[2]) +
+            a[2] * (b[0] * c[1] - b[1] * c[0])
+    }
 
     companion object {
         /** Полиномиальная phi^B(t) = (1, t, t^2)^T. */
@@ -54,44 +59,4 @@ class GeneratingSystem(
             rhoDD = { t -> -Math.sin(t) }, sigmaDD = { t -> -Math.cos(t) },
         )
     }
-}
-
-/** Векторное произведение u x v в R^3. */
-fun cross3(u: DoubleArray, v: DoubleArray): DoubleArray = doubleArrayOf(
-    u[1] * v[2] - u[2] * v[1],
-    u[2] * v[0] - u[0] * v[2],
-    u[0] * v[1] - u[1] * v[0],
-)
-
-/** Скалярное произведение в R^3. */
-fun dot3(u: DoubleArray, v: DoubleArray): Double = u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
-
-/** Определитель 3x3 из столбцов-векторов (a, b, c). */
-fun det3(a: DoubleArray, b: DoubleArray, c: DoubleArray): Double = dot3(a, cross3(b, c))
-
-/**
- * Обращение матрицы 3x3 со столбцами c0, c1, c2 (строки M^{-1} = (c1 x c2,
- * c2 x c0, c0 x c1)/det). Используется для M_k^{-1} при устойчивом построении omega_j.
- *
- * Вырожденность проверяется ОТНОСИТЕЛЬНО масштаба самого определителя
- * ([det3Scale] — сумма модулей шести слагаемых формулы Лейбница), а не по
- * абсолютному порогу: `det(M_k) ~ h^3`, поэтому абсолютный порог был ложным
- * «singular» на мелких сетках и пропускал шум на крупных. Обоснование значения
- * порога — в KDoc [DEGENERACY_RELATIVE_EPS].
- */
-fun invert3(c0: DoubleArray, c1: DoubleArray, c2: DoubleArray): Array<DoubleArray> {
-    val det = det3(c0, c1, c2)
-    val scale = det3Scale(c0, c1, c2)
-    require(isSignificant(det, scale)) {
-        "invert3: matrix is singular or near-singular, det=$det, scale=$scale, " +
-            "det/scale=${det / scale} < $DEGENERACY_RELATIVE_EPS"
-    }
-    val r0 = cross3(c1, c2)
-    val r1 = cross3(c2, c0)
-    val r2 = cross3(c0, c1)
-    return arrayOf(
-        doubleArrayOf(r0[0] / det, r0[1] / det, r0[2] / det),
-        doubleArrayOf(r1[0] / det, r1[1] / det, r1[2] / det),
-        doubleArrayOf(r2[0] / det, r2[1] / det, r2[2] / det),
-    )
 }

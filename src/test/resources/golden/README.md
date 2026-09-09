@@ -4,7 +4,7 @@
 для контроля регрессии при переработке: `grid.json` (узлы и признаки сеток),
 `basis.json` (базис и сплайн на контрольных точках), `functionals.json` (семейства
 аппроксимирующих функционалов), `metrics.json` (`errorEh`, `orders`, `constCh`),
-`algebra.json` (`cross3`/`dot3`/`det3`/`invert3`, `nonDegenerate`, порождающие системы).
+`algebra.json` (`nonDegenerate`, порождающие системы).
 
 Формат: JSON без внешних зависимостей; каждое число `Double` записано как 16 шестнадцатеричных
 цифр raw bits (`Double.toRawBits`), что исключает потери при печати и разборе. Поле

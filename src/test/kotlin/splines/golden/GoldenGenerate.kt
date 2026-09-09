@@ -43,7 +43,6 @@ class GoldenGenerate {
 
     @Test
     fun algebra() = writeGolden(dir, "algebra.json", root(
-        "triples" to GoldenCompute.triplesCases(),
         "nonDegenerate" to GoldenCompute.nonDegenerateCases(),
         "phi" to GoldenCompute.phiCases(),
     ))

@@ -4,9 +4,6 @@ import numerics.backend.Backends
 import splines.GeneratingSystem
 import splines.Grid
 import splines.MinimalSplineBasis
-import splines.cross3
-import splines.det3
-import splines.dot3
 import splines.functionals.AveragingFunctionals
 import splines.functionals.DeBoorFixFunctionals
 import splines.functionals.DiscreteDeBoorFixFunctionals
@@ -16,7 +13,6 @@ import splines.functionals.ThreePointFunctionals
 import splines.golden.GoldenIo.dbl
 import splines.golden.GoldenIo.mat
 import splines.golden.GoldenIo.vec
-import splines.invert3
 import splines.metrics.constCh
 import splines.metrics.errorEh
 import splines.metrics.orders
@@ -151,19 +147,6 @@ object GoldenCompute {
         errLists.withIndex().associate { (i, l) -> "list$i" to vec(DoubleArray(l.size) { k -> constCh(l[k], 0.5.pow(k + 1), 3.0) }) }
 
     // ---- algebra.json ----------------------------------------------------------
-
-    fun triplesCases(): List<Map<String, Any?>> = GoldenInputs.triples.map { tr ->
-        val u = tr[0]; val v = tr[1]; val w = tr[2]
-        linkedMapOf<String, Any?>(
-            "cross3_uv" to vec(cross3(u, v)),
-            "cross3_vw" to vec(cross3(v, w)),
-            "dot3_uv" to dbl(dot3(u, v)),
-            "dot3_vw" to dbl(dot3(v, w)),
-            "det3" to dbl(det3(u, v, w)),
-        ).apply {
-            try { put("invert3", mat(invert3(u, v, w))) } catch (e: Exception) { put("invert3Error", e::class.simpleName) }
-        }
-    }
 
     fun nonDegenerateCases(): Map<String, Any?> =
         GoldenInputs.grids.mapValues { (_, g) -> (-2..g.n - 1).map { nonDegenerate(g, it) } }

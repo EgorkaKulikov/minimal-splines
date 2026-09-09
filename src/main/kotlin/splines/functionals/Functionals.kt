@@ -2,6 +2,7 @@ package splines.functionals
 
 import kotlin.math.abs
 
+import numerics.DenseMatrix
 import numerics.LinearAlgebra
 import numerics.NumericsContext
 import splines.DEGENERACY_RELATIVE_EPS
@@ -195,7 +196,7 @@ class ProjFunctionals(
     /** Локальная биортогонализация: coeff так, что sum_p coeff_p omega_i(points_p)=delta_ij. */
     private fun localFunctional(j: Int, points: DoubleArray, indices: IntArray): ValueFunctional {
         val m = points.size
-        val matrix = Array(m) { r -> DoubleArray(m) { c -> basis.omega(indices[r], points[c]) } }
+        val matrix = DenseMatrix.build(m, m) { r, c -> basis.omega(indices[r], points[c]) }
         val rhs = DoubleArray(m) { if (indices[it] == j) 1.0 else 0.0 }
         val coeff = LinearAlgebra.solve(matrix, rhs, ctx.backend)
         return ValueFunctional(points, coeff)
@@ -568,11 +569,10 @@ class AveragingFunctionals(
         if (j == -2) return ValueFunctional(doubleArrayOf(grid.x(0)), doubleArrayOf(1.0))
         if (j == n - 1) return ValueFunctional(doubleArrayOf(grid.x(n)), doubleArrayOf(1.0))
         val ym = yNode(j - 1); val y0 = yNode(j); val yp = yNode(j + 1)
-        val matrix = arrayOf(
-            doubleArrayOf(1.0, 1.0, 1.0),
-            doubleArrayOf(sys.rho(ym), sys.rho(y0), sys.rho(yp)),
-            doubleArrayOf(sys.sigma(ym), sys.sigma(y0), sys.sigma(yp)),
-        )
+        val ys = doubleArrayOf(ym, y0, yp)
+        val matrix = DenseMatrix.build(3, 3) { r, c ->
+            when (r) { 0 -> 1.0; 1 -> sys.rho(ys[c]); else -> sys.sigma(ys[c]) }
+        }
         // Вектор a^N_j аппроксимационного соотношения — тот же самый, по которому строится
         // базис; ранее здесь жила его дословная копия (`aN`).
         val coeff = LinearAlgebra.solve(matrix, basis.computeA(j), ctx.backend)
@@ -619,9 +619,8 @@ class ThreePointFunctionals(
         val points = doubleArrayOf(x1, xMid, x2)
         val active = intArrayOf(j - 1, j, j + 1) // активные на (x_{j+1},x_{j+2})
         // M[p][slot] = omega_active[slot](point_p); решаем M c = fvals -> lambda_j = c[slot==j].
-        val mt = Array(3) { p -> DoubleArray(3) { s -> basis.omega(active[s], points[p]) } }
         // coeffs_p = (M^{-1})[1][p]: решаем M^T r = e_1 (строка 1 обратной).
-        val mTrans = Array(3) { i -> DoubleArray(3) { p -> mt[p][i] } }
+        val mTrans = DenseMatrix.build(3, 3) { i, p -> basis.omega(active[i], points[p]) }
         val e1 = doubleArrayOf(0.0, 1.0, 0.0)
         val coeff = LinearAlgebra.solve(mTrans, e1, ctx.backend)
         return ValueFunctional(points, coeff)
