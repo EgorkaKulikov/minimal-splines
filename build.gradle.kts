@@ -155,3 +155,18 @@ publishing {
         // }
     }
 }
+
+// Измерения производительности публичного API; в артефакт и в test не входят.
+val benchmark: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output + configurations["runtimeClasspath"]
+    runtimeClasspath += output + compileClasspath
+}
+tasks.register<JavaExec>("benchmark") {
+    description = "Измерения производительности построения базиса и функционалов; размеры сеток — через -Pbench.args=\"100 1000 10000\""
+    group = "verification"
+    classpath = benchmark.runtimeClasspath
+    mainClass.set("splines.bench.BenchKt")
+    maxHeapSize = "4g"
+    args = (project.findProperty("bench.args") as String? ?: "100 1000 10000").split(" ").filter { it.isNotBlank() }
+    systemProperty("numerics.backend", numericsBackend)
+}
