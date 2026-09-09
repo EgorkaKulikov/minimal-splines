@@ -11,8 +11,9 @@ import splines.golden.GoldenIo.section
 import kotlin.test.assertEquals
 
 /**
- * basis.json: значения базиса и сплайна — относительно 1e-12 (коэффициенты проходят
- * через решение 3x3 СЛАУ, порядок операций зависит от реализации); `interval` — точно.
+ * basis.json: значения базиса и сплайна — относительно [GoldenCompare.BASIS_TOLERANCE]
+ * (коэффициенты проходят через обращение 3x3 матриц; эталон 0.1.0 получен по формулам Крамера,
+ * см. обоснование допуска); `interval` — точно.
  */
 @Tag("fast")
 class GoldenBasisTest {
@@ -23,7 +24,7 @@ class GoldenBasisTest {
         val cases = exp.keys.map { key ->
             dynamicTest(key) {
                 val (sys, g) = inputs.getValue(key)
-                compare(exp[key], GoldenCompute.basisCase(sys, g), key, Mode.REL)
+                compare(exp[key], GoldenCompute.basisCase(sys, g), key, Mode.REL, GoldenCompare.BASIS_TOLERANCE)
             }
         }
         return cases + dynamicTest("набор случаев") { assertEquals(inputs.keys, exp.keys) }

@@ -59,7 +59,23 @@ class ConditioningDiagnosticTest {
         out.parentFile.mkdirs()
         out.writeText(lines.joinToString("\n") + "\n")
         assertTrue(puFailures.isEmpty(), "разбиение единицы нарушено: $puFailures")
-        // Факт (1b): при n = 10^4 на [0,1] и на [100,101] базис НЕ строится — невязка обращения > 1e-8.
-        if (buildFailures.isNotEmpty()) println("conditioning-diagnostic: НЕ ПОСТРОЕНЫ: $buildFailures")
+        if (buildFailures.isNotEmpty()) println("conditioning-diagnostic: не построены: $buildFailures")
+        // 1c: критерий достоверности — оценка числа обусловленности M_k, не превышающая
+        // MinimalSplineBasis.MAX_CONDITION. B на [100,101] отвергается с исключением о числе
+        // обусловленности (глобальные координаты порождающей системы); на [0,1] базис строится.
+        // Измерено (1c): cond(M_k) на [0,1] растёт как n²; при n = 10⁴ она равна ~3·10⁸ (B) и ~10⁹ (H),
+        // то есть превышает MAX_CONDITION = 10⁸, и базис в глобальных координатах не строится.
+        // Ожидается построение после перехода к локальным координатам (этап 1d); здесь фиксируется
+        // только то, что любой отказ вызван именно критерием обусловленности.
+        assertTrue(
+            buildFailures.all { it.contains("число обусловленности") },
+            "отказ построения не по числу обусловленности: $buildFailures",
+        )
+        assertTrue(
+            buildFailures.any { it.startsWith("B[100.0,101.0] n=100") },
+            "B на [100,101] должен отвергаться по числу обусловленности: $buildFailures",
+        )
+        val smallN = buildFailures.filter { f -> listOf(10, 100, 1000).any { f.contains(" n=$it:") } && !f.startsWith("B[") }
+        assertTrue(smallN.isEmpty(), "базис на [0,1] при n ≤ 10³ должен строиться: $smallN")
     }
 }

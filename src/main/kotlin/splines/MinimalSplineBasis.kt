@@ -12,9 +12,19 @@ import numerics.NumericsContext
  * Базис квадратичных минимальных сплайнов {omega_j}_{j=-2}^{n-1} на сетке с тройными краевыми узлами.
  * Значения на интервале (x_k, x_{k+1}) вычисляются как M_k^{-1} phi(t), где M_k = (a_{k-2}|a_{k-1}|a_k) —
  * матрица аппроксимационного соотношения; обратные матрицы вычисляются средствами numerical-core
- * в реализации BLAS/LAPACK из [ctx]. Вырожденность или недостоверность обращения приводит к исключению при построении.
+ * в реализации BLAS/LAPACK из [ctx]. Достоверность обращения контролируется оценкой числа обусловленности M_k
+ * (см. [MAX_CONDITION]); вырожденная или слишком плохо обусловленная матрица приводит к исключению при построении.
  */
 class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: NumericsContext = NumericsContext.default()) {
+    companion object {
+        /**
+         * Наибольшее допустимое число обусловленности матрицы аппроксимационного соотношения;
+         * при большем значении в обратной матрице сохраняется менее восьми значащих цифр,
+         * и базис считается вырожденным на данном интервале.
+         */
+        const val MAX_CONDITION = 1e8
+    }
+
     val n = grid.n
 
     // a_j: на (x_{j+1},x_{j+2}) предел при тройном узле a_j = phi(x_{j+1}).
@@ -32,12 +42,21 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
 
     private fun invertApproximationMatrix(k: Int, ctx: NumericsContext): DoubleArray {
         val m = approximationMatrix(k)
-        val inv = Conditioning.inverse(m, ctx.backend)
-            ?: throw IllegalArgumentException("Матрица аппроксимационного соотношения на интервале $k вырождена")
-        val residual = Conditioning.inversionResidual(m, inv, ctx.backend)
-        require(residual <= Conditioning.INVERSION_RESIDUAL_TOLERANCE) {
-            "Матрица аппроксимационного соотношения на интервале $k плохо обусловлена: невязка обращения $residual"
+        val cond = Conditioning.conditionEstimate(m, ctx).valueOrNull()
+            ?: throw IllegalArgumentException(
+                "Матрица аппроксимационного соотношения на интервале $k численно вырождена: " +
+                    "оценка числа обусловленности недостоверна",
+            )
+        if (cond > MAX_CONDITION) {
+            throw IllegalArgumentException(
+                "Матрица аппроксимационного соотношения на интервале $k вырождена: " +
+                    "число обусловленности $cond превышает MAX_CONDITION = $MAX_CONDITION",
+            )
         }
+        val inv = Conditioning.inverse(m, ctx.backend)
+            ?: throw IllegalArgumentException(
+                "Матрица аппроксимационного соотношения на интервале $k численно вырождена",
+            )
         return inv.data
     }
 

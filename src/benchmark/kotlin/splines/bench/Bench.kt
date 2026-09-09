@@ -59,8 +59,15 @@ fun main(args: Array<String>) {
             val grid = Grid.uniform(n, 0.0, 1.0)
             // Побочный результат нужен, чтобы JIT не выбросил вычисление.
             var sink = 0.0
+            // Базис может не строиться по критерию обусловленности (cond(M_k) > MAX_CONDITION):
+            // такая строка выводится с прочерками и причиной, остальные размеры измеряются.
+            val basis = try {
+                MinimalSplineBasis(sys, grid)
+            } catch (e: IllegalArgumentException) {
+                println("| ${sys.name} | $n | — | — | — | — | — | ${e.message} |")
+                continue
+            }
             val tBasis = timed { sink += MinimalSplineBasis(sys, grid).grid.n }
-            val basis = MinimalSplineBasis(sys, grid)
             val tTheta = timed { sink += ProjFunctionals(basis).projectorCoeffs(::f, ::fD, ::fDD)[0] }
             val tXi1 = timed { sink += DeBoorFixFunctionals(basis, 1).projectorCoeffs(::f, ::fD, ::fDD)[0] }
             val tMu = timed { sink += AveragingFunctionals(basis).projectorCoeffs(::f, ::fD, ::fDD)[0] }

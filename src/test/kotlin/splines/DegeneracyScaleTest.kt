@@ -36,7 +36,7 @@ class DegeneracyScaleTest {
      * разбиение единицы `sum_j omega_j(t) = 1` (первая компонента phi равна 1).
      */
     @Test
-    @Disabled("1b: критерий невязки обращения (LAPACK) отвергает плохо масштабированные M_k на отрезках [0,1e-6] и [0,1e6]; решение о критерии — за пользователем")
+    @Disabled("глобальные координаты порождающей системы: cond(M_k) ~ 1e14 на [0,1e-6]; устраняется локальными координатами (этап 1d)")
     fun splineBasisBuildsOnTinyInterval() {
         val grid = Grid.uniform(8, 0.0, 1e-6)
         val basis = MinimalSplineBasis(GeneratingSystem.B, grid)
@@ -92,7 +92,7 @@ class DegeneracyScaleTest {
      * порождающей системы, а не порогов вырожденности.
      */
     @Test
-    @Disabled("1b: критерий невязки обращения (LAPACK) отвергает плохо масштабированные M_k на отрезках [0,1e-6] и [0,1e6]; решение о критерии — за пользователем")
+    @Disabled("глобальные координаты порождающей системы: cond(M_k) ~ 3e10 на [0,1e6]; устраняется локальными координатами (этап 1d)")
     fun splineBasisBuildsOnHugeInterval() {
         for (sys in listOf(GeneratingSystem.B, GeneratingSystem.T)) {
             val grid = Grid.uniform(8, 0.0, 1e6)

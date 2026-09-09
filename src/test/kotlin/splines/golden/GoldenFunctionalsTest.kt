@@ -13,8 +13,9 @@ import splines.golden.GoldenIo.section
 import kotlin.test.assertEquals
 
 /**
- * functionals.json: коэффициенты проекторов, cChi, closedFormInternal — относительно 1e-12
- * (семейства решают малые СЛАУ бэкендом numerical-core); флаги и классы исключений — точно.
+ * functionals.json: коэффициенты проекторов, cChi, closedFormInternal — относительно
+ * [GoldenCompare.BASIS_TOLERANCE] (семейства решают малые СЛАУ бэкендом numerical-core, эталон 0.1.0
+ * получен по формулам Крамера, см. обоснование допуска); флаги и классы исключений — точно.
  */
 @Tag("fast")
 class GoldenFunctionalsTest {
@@ -27,7 +28,10 @@ class GoldenFunctionalsTest {
             fams.keys.map { fam ->
                 dynamicTest("$key/$fam") {
                     val (sys, g) = inputs.getValue(key)
-                    compare(fams[fam], GoldenCompute.familyCase(fam, MinimalSplineBasis(sys, g)), "$key/$fam", Mode.REL)
+                    compare(
+                        fams[fam], GoldenCompute.familyCase(fam, MinimalSplineBasis(sys, g)), "$key/$fam", Mode.REL,
+                        GoldenCompare.BASIS_TOLERANCE,
+                    )
                 }
             }
         }
