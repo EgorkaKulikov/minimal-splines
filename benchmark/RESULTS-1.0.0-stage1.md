@@ -54,7 +54,7 @@
 ## После этапа 1d (локальные координаты интервала)
 
 Снято после перехода к локальному представлению порождающей системы psi_k = T_k phi на каждом интервале
-(`GeneratingSystem.localFrame`, `MinimalSplineBasis.localApproximationMatrix`). Те же машина, JVM, бэкенд и методика;
+(`GeneratingSystem.localFrame`, `MinimalSplineBasis.localApproximationMatrix`). Те же машина, JVM, реализация BLAS/LAPACK и методика;
 `./gradlew benchmark --offline -Pbench.args="100 1000 2000 3000 10000"`.
 
 | система | n | basis | theta | xi1 | mu | eval×10⁴ |
