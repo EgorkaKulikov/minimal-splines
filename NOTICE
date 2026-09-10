@@ -1,0 +1,6 @@
+minimal-splines
+Copyright 2026 Egor Kulikov
+
+Программа распространяется по лицензии Apache License 2.0 (см. LICENSE).
+Использует библиотеку numerical-core (Apache License 2.0), которая обращается к BLAS/LAPACK
+через dev.ludovic.netlib (MIT License).

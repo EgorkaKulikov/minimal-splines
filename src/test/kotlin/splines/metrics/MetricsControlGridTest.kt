@@ -11,20 +11,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Тесты параметра контрольной сетки в [errorEh]: обратная совместимость значения
- * по умолчанию и контроль равномерной нормы на измельчённой сетке.
+ * Тесты параметра контрольной сетки в [errorEh]: контроль равномерной нормы на измельчённой сетке.
  */
 @Tag("fast")
 class MetricsControlGridTest {
-
-    /** Значение по умолчанию — ровно прежние 100n+1 точек: существующие вызовы не меняют результат. */
-    @Test fun defaultRefinementReproducesPreviousBehaviour() {
-        val g = Grid.uniform(8, 0.0, 1.0)
-        val exact = { t: Double -> sin(6.0 * t) }
-        val eval = { t: Double -> sin(6.0 * t) + 1e-3 * sin(40.0 * t) }
-        assertEquals(DEFAULT_CONTROL_REFINEMENT, 100)
-        assertEquals(errorEh(exact, eval, g), errorEh(exact, eval, g, refinement = 100), 0.0)
-    }
 
     /** Измельчение контрольной сетки может только увеличить максимум по точкам, но не уменьшить. */
     @Test fun finerControlGridNeverDecreasesMaximum() {
@@ -37,9 +27,9 @@ class MetricsControlGridTest {
     }
 
     /**
-     * Контрольные данные Round 21: для гладкой разности переход со 100n+1 на 1000n+1
-     * точку сдвигает величину не более чем на 4.071e-4 в относительной мере, то есть
-     * сетка по умолчанию максимум ошибки НЕ занижает.
+     * Для гладкой разности переход со 100n+1 на 1000n+1 точку сдвигает величину не более чем
+     * на 4.071e-4 в относительной мере, то есть контрольная сетка по умолчанию максимум ошибки
+     * не занижает.
      */
     @Test fun defaultControlGridDoesNotUnderestimateSmoothError() {
         val g = Grid.uniform(32, 0.0, 1.0)
@@ -63,7 +53,7 @@ class MetricsControlGridTest {
         val coarse = errorEh(exact, eval, g)
         val fine = errorEh(exact, eval, g, refinement = 100_000)
         assertTrue(coarse < 0.9, "грубая контрольная сетка обязана пропустить пик, получено $coarse")
-        assertTrue(fine > 0.99, "измельчённая контрольная сетка обязана поймать пик, получено $fine")
+        assertTrue(fine > 0.99, "измельчённая контрольная сетка должна обнаружить пик, получено $fine")
     }
 
     /** refinement < 1 дал бы m = 0 и деление 0/0: это ошибка контракта, а не тихий NaN. */

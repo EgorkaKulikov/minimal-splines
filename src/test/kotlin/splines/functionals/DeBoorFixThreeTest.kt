@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 /**
  * Тесты трёх функционалов де Бура--Фикса xi^<0>, xi^<1>, xi^<2>
- * Источники формул перечислены в docs/REFERENCES.md, раздел 2.
+ * Источники формул перечислены в docs/ИСТОЧНИКИ.md, раздел 2.
  */
 @Tag("fast")
 class DeBoorFixThreeTest {

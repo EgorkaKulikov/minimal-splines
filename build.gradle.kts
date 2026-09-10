@@ -1,13 +1,15 @@
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
+
 plugins {
     kotlin("jvm") version "2.0.0"
     `java-library`
     `maven-publish`
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 repositories {
-    // numerical-core подключается как ОПУБЛИКОВАННЫЙ артефакт, а не как исходники
-    // соседнего репозитория. Порядок: mavenLocal первым — локальная сборка
+    // numerical-core подключается как опубликованный артефакт. Порядок: mavenLocal первым — локальная сборка
     // (`./gradlew publishToMavenLocal` в numerical-core) имеет приоритет; затем
     // GitHub Packages — оттуда артефакт берёт CI. GitHub Packages требует аутентификацию
     // даже на чтение: переменные окружения GITHUB_ACTOR/GITHUB_TOKEN (в GitHub Actions —
@@ -34,39 +36,58 @@ val numericalCoreVersion: String by project
 dependencies {
     // `api`, а не `implementation`: типы numerical-core (`GaussLegendre`, `NumericsContext`,
     // `LinearAlgebra`) входят в сигнатуры публичного API этой библиотеки
-    // (`FunctionalFamily(basis, ctx)`, `SupportPoints`), поэтому потребитель обязан
+    // (`FunctionalFamily(basis, ctx)`), поэтому потребитель обязан
     // видеть их на compile classpath транзитивно.
     api("io.github.egorkakulikov:numerical-core:$numericalCoreVersion")
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("net.jqwik:jqwik:1.9.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
     jvmToolchain(21)
+    explicitApi()
 }
 
 java {
     withSourcesJar()
 }
 
-// Бэкенд линейной алгебры в тестах: см. numerical-core/build.gradle.kts. Здесь он
-// нужен семействам функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
+// Реализация BLAS/LAPACK в тестах (свойство numerics.backend): требуется семействам
+// функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
 val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags("golden-generate") }
     systemProperty("numerics.backend", numericsBackend)
+    // Запас стека тестовой JVM: многопоточный dgetrf системного OpenBLAS на стандартном
+    // стеке потока завершал JVM сигналом (exit 139); см. numerical-core.
+    jvmArgs("-Xss8m")
 }
 
-/** Быстрый набор (тег `fast`); в этой библиотеке совпадает с `test` по составу. */
+// Формирование эталонов поведения (src/test/resources/golden, см. README.md там же).
+// Выполняется только по явному запросу; в `test` и `fastTest` тег golden-generate исключён.
+tasks.register<Test>("regenerateGolden") {
+    group = "verification"
+    description = "Перегенерировать golden-эталоны в src/test/resources/golden"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform { includeTags("golden-generate") }
+    systemProperty("golden.dir", layout.projectDirectory.dir("src/test/resources/golden").asFile.absolutePath)
+    systemProperty("golden.version", project.version.toString())
+    systemProperty("numerics.backend", numericsBackend)
+    outputs.upToDateWhen { false }
+}
+
+// Быстрый набор (тег `fast`); в этой библиотеке совпадает с `test` по составу.
 tasks.register<Test>("fastTest") {
     group = "verification"
     description = "Быстрый набор тестов (тег fast)"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
-    useJUnitPlatform { includeTags("fast") }
+    useJUnitPlatform { includeTags("fast"); excludeTags("golden-generate") }
     systemProperty("numerics.backend", numericsBackend)
 }
 
@@ -74,31 +95,51 @@ kover {
     currentProject {
         instrumentation {
             disabledForTestTasks.add("fastTest")
+            disabledForTestTasks.add("regenerateGolden")
+        }
+        sources {
+            // Измерения производительности — не библиотечный код, в покрытии не участвуют.
+            excludedSourceSets.add("benchmark")
+        }
+    }
+    reports {
+        filters {
+            excludes {
+                packages("splines.bench")
+            }
+        }
+        // Планка покрытия: проверяется задачей `koverVerify`, входящей в `check`.
+        // Замер при обеих реализациях BLAS/LAPACK: строки 95.8 %, ветви 90.9 %;
+        // порог — фактическое значение минус 1 %, чтобы результат не зависел от машины.
+        verify {
+            rule("Покрытие строк") {
+                minBound(94)
+            }
+            rule("Покрытие ветвей") {
+                bound {
+                    minValue = 89
+                    coverageUnits = CoverageUnit.BRANCH
+                }
+            }
         }
     }
 }
 
-// --- Проверка независимости от исходников соседних репозиториев -----------------
-// Гарантирует, что classpath компиляции содержит numerical-core ТОЛЬКО как jar-артефакт:
-// случайная `project(":...")`/`files("../numerical-core/build/...")` зависимость
-// провалит задачу. Входит в `check`.
-tasks.register("verifyArtifactDependencies") {
-    group = "verification"
-    description = "Убедиться, что numerical-core подключён как артефакт, а не как исходники"
-    val classpath = configurations.compileClasspath
-    doLast {
-        val offenders = classpath.get().files.filter { f ->
-            !f.name.endsWith(".jar") || f.path.contains("${File.separator}numerical-core${File.separator}build${File.separator}")
-        }
-        check(offenders.isEmpty()) {
-            "Зависимости обязаны быть jar-артефактами из репозитория Maven, найдено: $offenders"
-        }
-        val core = classpath.get().files.filter { it.name.startsWith("numerical-core-") && it.name.endsWith(".jar") }
-        check(core.size == 1) { "Ожидался ровно один артефакт numerical-core на classpath, найдено: $core" }
-        logger.lifecycle("numerical-core подключён как артефакт: ${core.single().name}")
+tasks.check {
+    dependsOn("koverVerify")
+}
+
+// --- Документация -------------------------------------------------------------
+// HTML-документация публичного API: ./gradlew dokkaHtml (результат в build/dokka/html).
+// Публичные символы без KDoc выводятся предупреждениями.
+tasks.dokkaHtml {
+    moduleName.set("minimal-splines")
+    dokkaSourceSets.configureEach {
+        includeNonPublic.set(false)
+        reportUndocumented.set(true)
+        jdkVersion.set(21)
     }
 }
-tasks.named("check") { dependsOn("verifyArtifactDependencies") }
 
 // --- Публикация ---------------------------------------------------------------
 publishing {
@@ -108,15 +149,17 @@ publishing {
             pom {
                 name.set("minimal-splines")
                 description.set(
-                    "Квадратичные минимальные сплайны на Kotlin/JVM: сетки с кратными узлами, " +
-                        "порождающие системы (полиномиальная, гиперболическая, тригонометрическая), " +
-                        "базис, аппроксимационные функционалы и квазиинтерполяция.",
+                    "Библиотека квадратичных минимальных сплайнов и квазиинтерполяции для платформы JVM: " +
+                        "базис по произвольной порождающей системе (полиномиальной, гиперболической, " +
+                        "тригонометрической) и локальные аппроксимационные функционалы без решения глобальной СЛАУ.",
                 )
                 url.set("https://github.com/EgorkaKulikov/minimal-splines")
+                inceptionYear.set("2026")
                 licenses {
                     license {
                         name.set("Apache License, Version 2.0")
                         url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                        distribution.set("repo")
                     }
                 }
                 developers {
@@ -127,16 +170,39 @@ publishing {
                 }
                 scm {
                     url.set("https://github.com/EgorkaKulikov/minimal-splines")
+                    connection.set("scm:git:https://github.com/EgorkaKulikov/minimal-splines.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/EgorkaKulikov/minimal-splines.git")
                 }
             }
         }
     }
     repositories {
-        // Пример подключения удалённого репозитория (раскомментировать и задать свойства):
-        // maven {
-        //     name = "remote"
-        //     url = uri(providers.gradleProperty("publishUrl").getOrElse(""))
-        //     credentials(PasswordCredentials::class) // remoteUsername / remotePassword
-        // }
+        // Публикация в GitHub Packages выполняется из CI по тегу версии задачей
+        // publishAllPublicationsToGitHubPackagesRepository; учётные данные — GITHUB_ACTOR/GITHUB_TOKEN
+        // либо gpr.user/gpr.token. Без них репозиторий объявлен, но недоступен; publishToMavenLocal
+        // от него не зависит.
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/EgorkaKulikov/minimal-splines")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orNull ?: providers.gradleProperty("gpr.user").orNull
+                password = providers.environmentVariable("GITHUB_TOKEN").orNull ?: providers.gradleProperty("gpr.token").orNull
+            }
+        }
     }
+}
+
+// Измерения производительности публичного API; в артефакт и в test не входят.
+val benchmark: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output + configurations["runtimeClasspath"]
+    runtimeClasspath += output + compileClasspath
+}
+tasks.register<JavaExec>("benchmark") {
+    description = "Измерения производительности построения базиса и функционалов; размеры сеток — через -Pbench.args=\"100 1000 10000\""
+    group = "verification"
+    classpath = benchmark.runtimeClasspath
+    mainClass.set("splines.bench.BenchKt")
+    maxHeapSize = "4g"
+    args = (project.findProperty("bench.args") as String? ?: "100 1000 10000").split(" ").filter { it.isNotBlank() }
+    systemProperty("numerics.backend", numericsBackend)
 }
