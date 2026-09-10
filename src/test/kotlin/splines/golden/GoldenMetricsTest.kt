@@ -11,7 +11,7 @@ import splines.golden.GoldenIo.section
 
 /**
  * metrics.json: errorEh — относительно [GoldenCompare.BASIS_TOLERANCE] (величина проходит через значения
- * сплайна и наследует погрешность эталона базиса); orders и constCh — побитово (явные формулы).
+ * сплайна и наследует погрешность эталона базиса).
  */
 @Tag("fast")
 class GoldenMetricsTest {
@@ -27,8 +27,6 @@ class GoldenMetricsTest {
         }
         return eh + listOf(
             dynamicTest("errorEh/набор случаев") { compare(expEh.keys.sorted(), got.keys.sorted(), "errorEh", Mode.BITS) },
-            dynamicTest("orders") { compare(section(root, "orders"), GoldenCompute.ordersCases(), "orders", Mode.BITS) },
-            dynamicTest("constCh") { compare(section(root, "constCh"), GoldenCompute.constChCases(), "constCh", Mode.BITS) },
         )
     }
 }

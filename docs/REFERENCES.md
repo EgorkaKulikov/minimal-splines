@@ -31,8 +31,8 @@
 | Полиномиальная система `phi^B = (1, t, t^2)` | `splines/GeneratingSystem.kt` | [Makarov 2012], [Демьянович 1994] | Подтверждено |
 | Гиперболическая система `phi^H = (1, sinh t, cosh t)` | `splines/GeneratingSystem.kt` | [Kulikov, Makarov 2019a] | Подтверждено |
 | Тригонометрическая система `phi^T = (1, sin t, cos t)` | `splines/GeneratingSystem.kt` | [Kosogorov, Makarov 2017] | Подтверждено |
-| Явные формулы `ReferenceSplines.omegaB` | `splines/MinimalSplineBasis.kt` | [Makarov 2012] | Подтверждено |
-| Явные формулы `ReferenceSplines.omegaH` | `splines/MinimalSplineBasis.kt` | [Kulikov, Makarov 2019a] | Подтверждено (выведено из общей формулы) |
+| Явные формулы `ReferenceSplines.omegaB` | `src/test/kotlin/splines/ReferenceSplines.kt` | [Makarov 2012] | Подтверждено |
+| Явные формулы `ReferenceSplines.omegaH` | `src/test/kotlin/splines/ReferenceSplines.kt` | [Kulikov, Makarov 2019a] | Подтверждено (выведено из общей формулы) |
 | Узлы кратности 3 на концах отрезка | `splines/Grid.kt` | [Kulikov, Makarov 2020] | Подтверждено |
 
 ## 2. Аппроксимационные функционалы

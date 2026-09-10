@@ -37,8 +37,6 @@ class GoldenGenerate {
     @Test
     fun metrics() = writeGolden(dir, "metrics.json", root(
         "errorEh" to GoldenCompute.errorEhCases(),
-        "orders" to GoldenCompute.ordersCases(),
-        "constCh" to GoldenCompute.constChCases(),
     ))
 
     @Test

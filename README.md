@@ -13,8 +13,7 @@ numerical-core  <--  minimal-splines  <--  integral-equations
 `minimal-splines` зависит только от [`numerical-core`](https://github.com/EgorkaKulikov/numerical-core)
 (квадратура Гаусса–Лежандра, линейная алгебра, `NumericsContext`) и ничего не знает об
 интегральных уравнениях. Любой проект, которому нужны минимальные сплайны, подключает
-эту библиотеку напрямую — без `integral-equations`; исполняемое доказательство —
-[`examples/standalone-consumer`](examples/standalone-consumer/README.md).
+эту библиотеку напрямую — без `integral-equations`.
 
 ## Что входит
 
@@ -23,9 +22,7 @@ numerical-core  <--  minimal-splines  <--  integral-equations
 | Сетка `X` | `splines.Grid` | `a = x_{-2} = x_{-1} = x_0 < x_1 < … < x_n = x_{n+1} = x_{n+2} = b`: узлы кратности 3 на концах, `x(j)` для `j = -2..n+2`, шаг `h = max (x_{j+1} - x_j)`; фабрики `uniform`, `quasiUniform`, `geometric`, `graded` |
 | Порождающая система `phi` | `splines.GeneratingSystem` | вектор-функция `phi(t) = (1, rho(t), sigma(t))` с производными до второго порядка; готовые `B = (1, t, t^2)`, `H = (1, sinh t, cosh t)`, `T = (1, sin t, cos t)` |
 | Базис | `splines.MinimalSplineBasis` | сплайны `omega_j`, `j = -2..n-1`, с носителями `[x_j, x_{j+3}]`: `omega`, `omegaDeriv`, `omegaDeriv2`, `activeOmega`, `evalSpline`, `evalSplineDeriv`, `evalSplineDeriv2`, `interval` |
-| Замкнутые формулы | `splines.ReferenceSplines` | `omegaB`, `omegaBDeriv`, `omegaH` — независимые от общего построения эталоны для тестов |
 | Функционалы | `splines.functionals.*` | `ApproxFunctional`, `FunctionalFamily` и пять семейств (таблица ниже) |
-| Опорные точки | `splines.functionals.SupportPoints` | объединение точек семейства `ValueFunctional` с явной индексацией `(j, q) -> r` |
 | Метрика | `splines.metrics.errorEh` | `E_h = max |u*(t) - u_h(t)|` на контрольной сетке `refinement * n + 1` точек |
 
 ## Что намеренно НЕ входит
@@ -166,7 +163,6 @@ fun main() {
 | Индексный критерий кратного узла побитово совпадает со сравнением значений | `GridCoincidenceTest` |
 | Масштабная инвариантность порогов вырожденности (`[0, 1e-6]`, `[0, 1e6]`) | `DegeneracyScaleTest` |
 | `omegaDeriv` согласуется с численной производной; вырожденность на правом тройном крае | `MinimalSplineBasisExtraTest` |
-| Объединение опорных точек по допуску, порядок `byAscendingValue`/`byFirstOccurrence` | `SupportPointsTest` |
 
 Внешняя сверка базиса `B` со `scipy.interpolate.BSpline` и сквозные характеризационные
 гейты (значения `E_h` решателей против эталонов с допуском `1e-9`) выполняются в
@@ -179,12 +175,9 @@ fun main() {
 ```bash
 ./gradlew test        # все тесты (единицы секунд)
 ./gradlew fastTest    # тег fast — совпадает с test по составу
-./gradlew check       # test + verifyArtifactDependencies + koverVerify
+./gradlew check       # test + koverVerify
 ./gradlew build
 ```
-
-`verifyArtifactDependencies` проверяет, что `numerical-core` присутствует на classpath
-только как jar из репозитория Maven, а не как исходники соседнего каталога.
 
 Бэкенд линейной алгебры в тестах фиксирован: `multik`; переопределение —
 `-Dnumerics.backend=reference`.
@@ -212,7 +205,6 @@ fun main() {
 |---|---|---|
 | `numerical-core` | квадратура, линейная алгебра, бэкенды, контекст, порядки сходимости | `minimal-splines -> numerical-core` |
 | `integral-equations` | решатели Фредгольма, Вольтерры, Урысона; характеризационные и верификационные гейты | `integral-equations -> minimal-splines` |
-| `examples/standalone-consumer` | образец независимого потребителя без `integral-equations` | `consumer -> {numerical-core, minimal-splines}` |
 
 Обратных зависимостей нет: код этой библиотеки не импортирует `solvers.*`, `problems.*`.
 

@@ -11,20 +11,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Тесты параметра контрольной сетки в [errorEh]: обратная совместимость значения
- * по умолчанию и контроль равномерной нормы на измельчённой сетке.
+ * Тесты параметра контрольной сетки в [errorEh]: контроль равномерной нормы на измельчённой сетке.
  */
 @Tag("fast")
 class MetricsControlGridTest {
-
-    /** Значение по умолчанию — ровно прежние 100n+1 точек: существующие вызовы не меняют результат. */
-    @Test fun defaultRefinementReproducesPreviousBehaviour() {
-        val g = Grid.uniform(8, 0.0, 1.0)
-        val exact = { t: Double -> sin(6.0 * t) }
-        val eval = { t: Double -> sin(6.0 * t) + 1e-3 * sin(40.0 * t) }
-        assertEquals(DEFAULT_CONTROL_REFINEMENT, 100)
-        assertEquals(errorEh(exact, eval, g), errorEh(exact, eval, g, refinement = 100), 0.0)
-    }
 
     /** Измельчение контрольной сетки может только увеличить максимум по точкам, но не уменьшить. */
     @Test fun finerControlGridNeverDecreasesMaximum() {

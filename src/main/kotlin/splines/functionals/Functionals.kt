@@ -216,7 +216,7 @@ class ProjFunctionals(
      * @param j внутренний индекс функционала (краевые j не поддерживаются: у них иная ветвь формулы)
      * @throws IllegalStateException если знаменатель вырождается
      */
-    fun closedFormInternal(j: Int): ValueFunctional {
+    internal fun closedFormInternal(j: Int): ValueFunctional {
         val xj = grid.x(j); val xj1 = grid.x(j + 1); val xj2 = grid.x(j + 2); val xj3 = grid.x(j + 3)
         val a = basis.omega(j, mid(xj, xj1))
         val c = basis.omega(j, mid(xj1, xj2))

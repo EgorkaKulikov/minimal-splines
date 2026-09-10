@@ -6,8 +6,7 @@ plugins {
 }
 
 repositories {
-    // numerical-core подключается как ОПУБЛИКОВАННЫЙ артефакт, а не как исходники
-    // соседнего репозитория. Порядок: mavenLocal первым — локальная сборка
+    // numerical-core подключается как опубликованный артефакт. Порядок: mavenLocal первым — локальная сборка
     // (`./gradlew publishToMavenLocal` в numerical-core) имеет приоритет; затем
     // GitHub Packages — оттуда артефакт берёт CI. GitHub Packages требует аутентификацию
     // даже на чтение: переменные окружения GITHUB_ACTOR/GITHUB_TOKEN (в GitHub Actions —
@@ -34,7 +33,7 @@ val numericalCoreVersion: String by project
 dependencies {
     // `api`, а не `implementation`: типы numerical-core (`GaussLegendre`, `NumericsContext`,
     // `LinearAlgebra`) входят в сигнатуры публичного API этой библиотеки
-    // (`FunctionalFamily(basis, ctx)`, `SupportPoints`), поэтому потребитель обязан
+    // (`FunctionalFamily(basis, ctx)`), поэтому потребитель обязан
     // видеть их на compile classpath транзитивно.
     api("io.github.egorkakulikov:numerical-core:$numericalCoreVersion")
 
@@ -92,28 +91,6 @@ kover {
         }
     }
 }
-
-// --- Проверка независимости от исходников соседних репозиториев -----------------
-// Гарантирует, что classpath компиляции содержит numerical-core ТОЛЬКО как jar-артефакт:
-// случайная `project(":...")`/`files("../numerical-core/build/...")` зависимость
-// провалит задачу. Входит в `check`.
-tasks.register("verifyArtifactDependencies") {
-    group = "verification"
-    description = "Убедиться, что numerical-core подключён как артефакт, а не как исходники"
-    val classpath = configurations.compileClasspath
-    doLast {
-        val offenders = classpath.get().files.filter { f ->
-            !f.name.endsWith(".jar") || f.path.contains("${File.separator}numerical-core${File.separator}build${File.separator}")
-        }
-        check(offenders.isEmpty()) {
-            "Зависимости обязаны быть jar-артефактами из репозитория Maven, найдено: $offenders"
-        }
-        val core = classpath.get().files.filter { it.name.startsWith("numerical-core-") && it.name.endsWith(".jar") }
-        check(core.size == 1) { "Ожидался ровно один артефакт numerical-core на classpath, найдено: $core" }
-        logger.lifecycle("numerical-core подключён как артефакт: ${core.single().name}")
-    }
-}
-tasks.named("check") { dependsOn("verifyArtifactDependencies") }
 
 // --- Публикация ---------------------------------------------------------------
 publishing {

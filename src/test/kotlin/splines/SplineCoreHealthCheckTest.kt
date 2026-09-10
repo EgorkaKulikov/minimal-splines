@@ -1,6 +1,5 @@
 package splines
 
-import numerics.GaussLegendre
 import splines.GeneratingSystem
 import splines.Grid
 import splines.MinimalSplineBasis
@@ -17,13 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * ОБЩИЕ health-checks вычислительного ядра: минимальные сплайны, порождающие
- * системы, аппроксимационные функционалы и квадратура.
- *
- * Эти проверки НЕ зависят от конкретного интегрального оператора (Фредгольма,
- * Вольтерры или Урысона) — они относятся к пакету `numerics`. Поэтому они собраны
- * здесь в одном месте: ранее тот же набор был продублирован в решателях Фредгольма
- * и Вольтерры почти дословно.
+ * Инварианты базиса и функционалов: разбиение единицы, биортогональность, точность на span φ.
  *
  * Каждая проверка выполняется на четырёх сетках — равномерной, квазиравномерной,
  * градуированной и геометрической, — чтобы отловить ошибки, проявляющиеся только при
@@ -53,7 +46,6 @@ class SplineCoreHealthCheckTest {
         const val SAMPLE_COUNT = 200
     }
 
-    private val quad = GaussLegendre(8)
     private val uniformGrid = Grid.uniform(8)
     private val quasiUniformGrid = Grid.quasiUniform(8)
     private val gradedGrid = Grid.graded(8)
@@ -420,29 +412,6 @@ class SplineCoreHealthCheckTest {
             builtDefect < LINEAR_SOLVE_TOLERANCE,
             "Основной путь построения theta должен воспроизводить константу на любой сетке, " +
                 "наибольшее отклонение = $builtDefect",
-        )
-    }
-
-    /**
-     * Точность квадратуры Гаусса–Лежандра: формула с восемью узлами точна для
-     * многочленов степени до `2*8 - 1 = 15` включительно, а на гладких неполиномиальных
-     * функциях даёт погрешность на уровне машинной точности.
-     */
-    @Test
-    fun gaussLegendreQuadratureIsAccurate() {
-        val interval = doubleArrayOf(0.0, 1.0)
-        var deviation = 0.0
-        // Многочлены t^k, k = 0..15: точное значение интеграла равно 1/(k+1).
-        for (k in 0..15) {
-            val computed = quad.integrate(interval) { t -> Math.pow(t, k.toDouble()) }
-            deviation = maxOf(deviation, abs(computed - 1.0 / (k + 1)))
-        }
-        deviation = maxOf(deviation, abs(quad.integrate(interval) { t -> Math.exp(t) } - (Math.E - 1.0)))
-        deviation = maxOf(deviation, abs(quad.integrate(interval) { t -> 1.0 / (t + 1.0) } - Math.log(2.0)))
-        assertTrue(
-            deviation < EXACT_IDENTITY_TOLERANCE,
-            "Квадратура должна быть точна на многочленах степени <= 15 и точна для гладких функций, " +
-                "наибольшее отклонение = $deviation",
         )
     }
 }

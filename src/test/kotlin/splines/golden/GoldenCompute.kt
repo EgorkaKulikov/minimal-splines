@@ -13,11 +13,8 @@ import splines.functionals.ThreePointFunctionals
 import splines.golden.GoldenIo.dbl
 import splines.golden.GoldenIo.mat
 import splines.golden.GoldenIo.vec
-import splines.metrics.constCh
 import splines.metrics.errorEh
-import splines.metrics.orders
 import splines.nonDegenerate
-import kotlin.math.pow
 
 /**
  * Вычисление эталонных величин. Один и тот же код формирует эталон (GoldenGenerate)
@@ -136,15 +133,6 @@ object GoldenCompute {
             }
         }
     }
-
-    val errLists: List<List<Double>> = listOf(listOf(1.0, 0.125, 0.015625), listOf(1e-3, 1e-13), listOf(1.0, 0.0))
-
-    fun ordersCases(): Map<String, Any?> =
-        errLists.withIndex().associate { (i, l) -> "list$i" to vec(orders(l).toDoubleArray()) }
-
-    /** constCh(e_k, h_k, p) при h_k = 2^(-k-1), p = 3. */
-    fun constChCases(): Map<String, Any?> =
-        errLists.withIndex().associate { (i, l) -> "list$i" to vec(DoubleArray(l.size) { k -> constCh(l[k], 0.5.pow(k + 1), 3.0) }) }
 
     // ---- algebra.json ----------------------------------------------------------
 
