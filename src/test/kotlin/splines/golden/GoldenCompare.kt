@@ -26,6 +26,17 @@ object GoldenCompare {
      */
     const val BASIS_TOLERANCE = 1e-10
 
+    /**
+     * Относительный допуск для величин, вычисляемых через `Math.sin`, `Math.cos`, `Math.pow`
+     * (порождающая система T, сетки `quasiUniform` и `geometric`): HotSpot использует
+     * платформенные интринсики, результаты которых на x86_64 и aarch64 различаются в младшем
+     * бите. В сетке `geometric` расхождение в одну единицу младшего разряда у q = R^{1/(n-1)}
+     * переносится на q^j с множителем j ≤ n, а расхождения отдельных степеней складываются:
+     * при n = 32 это до ~7 единиц младшего разряда единицы. Допуск в 16 единиц младшего
+     * разряда покрывает это различие с запасом и исключает любое расхождение алгоритма.
+     */
+    val TRANSCENDENTAL_TOLERANCE: Double = 16 * Math.ulp(1.0)
+
     private fun isHex(s: String): Boolean = s.length == 16 && s.all { it in '0'..'9' || it in 'a'..'f' }
 
     fun compare(expected: Any?, got: Any?, label: String, mode: Mode, tol: Double = REL_TOL) {
