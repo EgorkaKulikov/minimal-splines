@@ -142,7 +142,7 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
                 "переполняются (масштаб $denomScale); уменьшите шаг сетки или длину отрезка"
         }
         require(isSignificant(denom, denomScale)) {
-            "computeA(j=$j): degenerate approximation relation, dot(dJ2, phiDJ1)=$denom, " +
+            "computeA(j=$j): вырожденное аппроксимационное соотношение, dot(dJ2, phiDJ1)=$denom, " +
                 "scale=$denomScale (значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
         val coef = dot(dJ2, phiJ1) / denom

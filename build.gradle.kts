@@ -55,8 +55,8 @@ java {
     withSourcesJar()
 }
 
-// Бэкенд линейной алгебры в тестах: см. numerical-core/build.gradle.kts. Здесь он
-// нужен семействам функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
+// Реализация BLAS/LAPACK в тестах (свойство numerics.backend): требуется семействам
+// функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
 val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 
 tasks.test {
@@ -81,7 +81,7 @@ tasks.register<Test>("regenerateGolden") {
     outputs.upToDateWhen { false }
 }
 
-/** Быстрый набор (тег `fast`); в этой библиотеке совпадает с `test` по составу. */
+// Быстрый набор (тег `fast`); в этой библиотеке совпадает с `test` по составу.
 tasks.register<Test>("fastTest") {
     group = "verification"
     description = "Быстрый набор тестов (тег fast)"
@@ -149,15 +149,17 @@ publishing {
             pom {
                 name.set("minimal-splines")
                 description.set(
-                    "Квадратичные минимальные сплайны на Kotlin/JVM: сетки с кратными узлами, " +
-                        "порождающие системы (полиномиальная, гиперболическая, тригонометрическая), " +
-                        "базис, аппроксимационные функционалы и квазиинтерполяция.",
+                    "Библиотека квадратичных минимальных сплайнов и квазиинтерполяции для платформы JVM: " +
+                        "базис по произвольной порождающей системе (полиномиальной, гиперболической, " +
+                        "тригонометрической) и локальные аппроксимационные функционалы без решения глобальной СЛАУ.",
                 )
                 url.set("https://github.com/EgorkaKulikov/minimal-splines")
+                inceptionYear.set("2026")
                 licenses {
                     license {
                         name.set("Apache License, Version 2.0")
                         url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                        distribution.set("repo")
                     }
                 }
                 developers {
@@ -168,17 +170,25 @@ publishing {
                 }
                 scm {
                     url.set("https://github.com/EgorkaKulikov/minimal-splines")
+                    connection.set("scm:git:https://github.com/EgorkaKulikov/minimal-splines.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/EgorkaKulikov/minimal-splines.git")
                 }
             }
         }
     }
     repositories {
-        // Пример подключения удалённого репозитория (раскомментировать и задать свойства):
-        // maven {
-        //     name = "remote"
-        //     url = uri(providers.gradleProperty("publishUrl").getOrElse(""))
-        //     credentials(PasswordCredentials::class) // remoteUsername / remotePassword
-        // }
+        // Публикация в GitHub Packages выполняется из CI по тегу версии задачей
+        // publishAllPublicationsToGitHubPackagesRepository; учётные данные — GITHUB_ACTOR/GITHUB_TOKEN
+        // либо gpr.user/gpr.token. Без них репозиторий объявлен, но недоступен; publishToMavenLocal
+        // от него не зависит.
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/EgorkaKulikov/minimal-splines")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orNull ?: providers.gradleProperty("gpr.user").orNull
+                password = providers.environmentVariable("GITHUB_TOKEN").orNull ?: providers.gradleProperty("gpr.token").orNull
+            }
+        }
     }
 }
 

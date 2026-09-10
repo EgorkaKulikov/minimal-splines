@@ -303,7 +303,7 @@ public class DeBoorFixFunctionals(
     public val r: Int = 1,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, if (r == 1) "xi" else "xi<$r>", ctx) {
-    init { require(r in 0..2) { "DeBoorFix: r must be in {0,1,2}, got $r" } }
+    init { require(r in 0..2) { "DeBoorFix: параметр r должен быть равен 0, 1 или 2, получено $r" } }
     override val isProjector: Boolean = true
     override val usesDerivative: Boolean = true
     override val usesSecondDerivative: Boolean = (r == 0)
@@ -339,7 +339,7 @@ public class DeBoorFixFunctionals(
         val denom = rhoD2 * sigD1 - rhoD1 * sigD2
         val denomScale = cancellationScale(rhoD2 * sigD1, rhoD1 * sigD2)
         require(isSignificant(denom, denomScale)) {
-            "buildXi1(j=$j): degenerate Wronskian rhoD2*sigD1 - rhoD1*sigD2=$denom, " +
+            "buildXi1(j=$j): вырожденный вронскиан rhoD2*sigD1 - rhoD1*sigD2=$denom, " +
                 "scale=$denomScale (значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
         val cD = ((sig2 - sig1) * rhoD2 - (rho2 - rho1) * sigD2) / denom
@@ -363,7 +363,7 @@ public class DeBoorFixFunctionals(
         val denom = rhoD2 * sigD1 - rhoD1 * sigD2
         val denomScale = cancellationScale(rhoD2 * sigD1, rhoD1 * sigD2)
         require(isSignificant(denom, denomScale)) {
-            "buildXi2(j=$j): degenerate Wronskian rhoD2*sigD1 - rhoD1*sigD2=$denom, " +
+            "buildXi2(j=$j): вырожденный вронскиан rhoD2*sigD1 - rhoD1*sigD2=$denom, " +
                 "scale=$denomScale (значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
         val cD = ((sig2 - sig1) * rhoD1 - (rho2 - rho1) * sigD1) / denom
@@ -396,13 +396,13 @@ public class DeBoorFixFunctionals(
         val wronskian12 = rDj1 * sDj2 - rDj2 * sDj1
         val wronskian12Scale = cancellationScale(rDj1 * sDj2, rDj2 * sDj1)
         require(isSignificant(wronskian12, wronskian12Scale)) {
-            "buildXi0(j=$j): degenerate Wronskian W_j=$wronskian12, scale=$wronskian12Scale " +
+            "buildXi0(j=$j): вырожденный вронскиан W_j=$wronskian12, scale=$wronskian12Scale " +
                 "(значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
         val curvature = rDj * sDDj - rDDj * sDj
         val curvatureScale = cancellationScale(rDj * sDDj, rDDj * sDj)
         require(isSignificant(curvature, curvatureScale)) {
-            "buildXi0(j=$j): degenerate rho'sigma''-rho''sigma'=$curvature, scale=$curvatureScale " +
+            "buildXi0(j=$j): вырожденный знаменатель rho'sigma''-rho''sigma'=$curvature, scale=$curvatureScale " +
                 "(значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
         val delta = wronskian12 * curvature
@@ -470,7 +470,7 @@ public class DiscreteDeBoorFixFunctionals(
     public val r: Int = 1,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, if (r == 1) "xitilde" else "xitilde<$r>", ctx) {
-    init { require(r in 1..2) { "DiscreteDeBoorFix: r must be in {1,2}, got $r" } }
+    init { require(r in 1..2) { "DiscreteDeBoorFix: параметр r должен быть равен 1 или 2, получено $r" } }
     override val isProjector: Boolean = false
     override val usesDerivative: Boolean = false
     // Контекст передаётся во вложенное семейство, чтобы `raw.ctx` совпадал с контекстом обёртки.
@@ -494,7 +494,7 @@ public class DiscreteDeBoorFixFunctionals(
         val denom = right - left
         val denomScale = cancellationScale(right, left)
         require(isSignificant(denom, denomScale)) {
-            "buildXiTilde(j=$j,r=$r): degenerate divided-difference span x=$right - x=$left = $denom, " +
+            "buildXiTilde(j=$j,r=$r): вырожденный шаг разделённой разности x=$right - x=$left = $denom, " +
                 "scale=$denomScale (значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
         }
         // f(node) + w (f(right) - f(left))/denom как комбинация значений.
