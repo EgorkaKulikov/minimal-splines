@@ -1,14 +1,24 @@
 # CI библиотеки minimal-splines.
 #
-# ЗАВИСИМОСТЬ ОТ numerical-core. Библиотека собирается против ОПУБЛИКОВАННОГО
+# ЗАВИСИМОСТЬ ОТ numerical-core. Библиотека собирается против опубликованного
 # артефакта numerical-core из GitHub Packages
 # (https://maven.pkg.github.com/EgorkaKulikov/numerical-core; версия — numericalCoreVersion
 # в gradle.properties, репозиторий объявлен в repositories build.gradle.kts). GitHub Packages
 # требует аутентификацию даже на чтение, поэтому шагам gradle передаётся GITHUB_TOKEN
 # (встроенный токен читает пакеты того же владельца; для этого workflow нужно разрешение
-# packages: read; GITHUB_ACTOR runner выставляет сам). Это НЕ зависимость от исходников:
-# сборка видит numerical-core только как jar, что проверяет задача
-# verifyArtifactDependencies (входит в check).
+# packages: read; GITHUB_ACTOR runner выставляет сам).
+#
+# Две задачи:
+#   * test — тесты на матрице «операционная система × реализация BLAS/LAPACK».
+#     Реализация задаётся свойством `numerics.backend` (java — чистая JVM-реализация
+#     netlib F2J, native — системные BLAS/LAPACK через JNI). На Ubuntu системные
+#     библиотеки не предустановлены, поэтому для варианта native ставится
+#     libopenblas-dev: он даёт libblas.so.3 и liblapack.so.3 через alternatives.
+#     Без них netlib молча откатывается на F2J — это ловит отдельный шаг проверки
+#     нативности. Отчёт о покрытии и его планка (koverVerify, входит в check) снимаются
+#     на варианте ubuntu × java.
+#   * publish-check — публикация в локальный репозиторий Maven и проверка состава
+#     артефакта и его POM.
 #
 # Машинно-зависимых гейтов здесь нет: тесты проверяют математические инварианты
 # (биортогональность, разбиение единицы, точность на span), а не эталонные снимки.
@@ -27,13 +37,75 @@ env:
   # Учётные данные для чтения numerical-core из GitHub Packages (см. repositories в build.gradle.kts).
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+# Новый запуск на той же ветке отменяет предыдущий незавершённый.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
-    name: Тесты, инварианты и покрытие
+    name: Тесты (${{ matrix.os }}, ${{ matrix.backend }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        backend: [java, native]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Установка JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Настройка Gradle с кэшем
+        uses: gradle/actions/setup-gradle@v6
+
+      # На macOS системные BLAS/LAPACK даёт Accelerate, ничего ставить не нужно.
+      - name: Установка системных BLAS/LAPACK (Ubuntu, native)
+        if: matrix.os == 'ubuntu-latest' && matrix.backend == 'native'
+        run: sudo apt-get update && sudo apt-get install -y libopenblas-dev liblapack-dev
+
+      # Реализация по умолчанию обязана быть нативной, иначе вариант native матрицы
+      # молча проверял бы то же, что и java: BackendSelectionTest сверяет Backends.default()
+      # с запрошенным свойством и падает при откате на F2J.
+      - name: Проверка нативности реализации BLAS/LAPACK
+        if: matrix.backend == 'native'
+        run: ./gradlew test --tests splines.BackendSelectionTest -Dnumerics.backend=native --no-daemon
+        env:
+          OPENBLAS_NUM_THREADS: 4
+
+      - name: Тесты на реализации ${{ matrix.backend }}
+        run: ./gradlew test -Dnumerics.backend=${{ matrix.backend }} --no-daemon
+        env:
+          # Ограничение потоков системного OpenBLAS: многопоточный dgetrf на стандартном
+          # стеке потока валил тестовую JVM (exit 139).
+          OPENBLAS_NUM_THREADS: 4
+
+      # Полная проверка (check включает koverVerify) и отчёт о покрытии снимаются один раз,
+      # на самом воспроизводимом варианте матрицы (Ubuntu, чистая JVM-реализация).
+      - name: Проверка (check с планкой покрытия) и отчёт Kover
+        if: matrix.os == 'ubuntu-latest' && matrix.backend == 'java'
+        run: ./gradlew check koverXmlReport -Dnumerics.backend=java --no-daemon
+
+      - name: Отчёты тестов и покрытия
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-${{ matrix.os }}-${{ matrix.backend }}
+          path: |
+            build/reports/tests/
+            build/reports/kover/
+            build/reports/boundary-cases.tsv
+            build/test-results/
+            **/hs_err_pid*.log
+          if-no-files-found: ignore
+
+  publish-check:
+    name: Проверка публикации артефакта
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,20 +120,22 @@ jobs:
       - name: Настройка Gradle с кэшем
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Проверка (тесты, verifyArtifactDependencies, покрытие)
-        run: ./gradlew check koverXmlReport --no-daemon
-
-      - name: Тесты на чисто-Java бэкенде линейной алгебры (F2J LAPACK)
-        run: ./gradlew test -Dnumerics.backend=java --no-daemon
-
       - name: Локальная публикация артефакта (проверка POM и sources)
         run: ./gradlew publishToMavenLocal --no-daemon
 
-      - name: Отчёты тестов и покрытия
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-reports
-          path: |
-            build/reports/tests/
-            build/reports/kover/
+      # Координаты и версия читаются из gradle.properties, чтобы проверка не
+      # расходилась со сборкой при смене версии.
+      - name: Проверка состава артефакта и POM
+        run: |
+          set -eu
+          group=$(grep '^group=' gradle.properties | cut -d= -f2 | tr . /)
+          version=$(grep '^version=' gradle.properties | cut -d= -f2)
+          dir="$HOME/.m2/repository/$group/minimal-splines/$version"
+          ls -la "$dir"
+          for f in "minimal-splines-$version.jar" "minimal-splines-$version-sources.jar" "minimal-splines-$version.pom"; do
+            test -s "$dir/$f" || { echo "отсутствует $dir/$f"; exit 1; }
+          done
+          pom="$dir/minimal-splines-$version.pom"
+          # Зависимость на numerical-core обязана быть объявлена в области compile (api).
+          grep -q '<artifactId>numerical-core</artifactId>' "$pom" || { echo "POM не объявляет зависимость numerical-core"; exit 1; }
+          echo "артефакт $group:minimal-splines:$version опубликован корректно"

@@ -1,3 +1,5 @@
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
+
 plugins {
     kotlin("jvm") version "2.0.0"
     `java-library`
@@ -59,6 +61,9 @@ val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 tasks.test {
     useJUnitPlatform { excludeTags("golden-generate") }
     systemProperty("numerics.backend", numericsBackend)
+    // Запас стека тестовой JVM: многопоточный dgetrf системного OpenBLAS на стандартном
+    // стеке потока завершал JVM сигналом (exit 139); см. numerical-core.
+    jvmArgs("-Xss8m")
 }
 
 // Формирование эталонов поведения (src/test/resources/golden, см. README.md там же).
@@ -91,7 +96,36 @@ kover {
             disabledForTestTasks.add("fastTest")
             disabledForTestTasks.add("regenerateGolden")
         }
+        sources {
+            // Измерения производительности — не библиотечный код, в покрытии не участвуют.
+            excludedSourceSets.add("benchmark")
+        }
     }
+    reports {
+        filters {
+            excludes {
+                packages("splines.bench")
+            }
+        }
+        // Планка покрытия: проверяется задачей `koverVerify`, входящей в `check`.
+        // Замер при обеих реализациях BLAS/LAPACK: строки 95.8 %, ветви 90.9 %;
+        // порог — фактическое значение минус 1 %, чтобы результат не зависел от машины.
+        verify {
+            rule("Покрытие строк") {
+                minBound(94)
+            }
+            rule("Покрытие ветвей") {
+                bound {
+                    minValue = 89
+                    coverageUnits = CoverageUnit.BRANCH
+                }
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn("koverVerify")
 }
 
 // --- Публикация ---------------------------------------------------------------
