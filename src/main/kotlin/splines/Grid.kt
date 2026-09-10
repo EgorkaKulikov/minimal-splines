@@ -13,7 +13,7 @@ package splines
  * @throws IllegalArgumentException если n < 1, размер interior не равен n+1 либо узлы не
  *   строго возрастают.
  */
-class Grid(val n: Int, interior: DoubleArray) {
+public class Grid(public val n: Int, interior: DoubleArray) {
     init {
         // n >= 1: при n = 0 нет ни одного интервала, и вычисление h = max_j(...) упало бы на
         // пустом диапазоне невнятным NoSuchElementException.
@@ -31,8 +31,8 @@ class Grid(val n: Int, interior: DoubleArray) {
         }
     }
 
-    val a: Double = interior.first()
-    val b: Double = interior.last()
+    public val a: Double = interior.first()
+    public val b: Double = interior.last()
 
     /**
      * Узлы x_{-2..n+2}, длина n+5; idx(j) = j+2.
@@ -48,7 +48,7 @@ class Grid(val n: Int, interior: DoubleArray) {
     }
 
     /** Шаг h = max_j (x_{j+1} - x_j) по внутренним интервалам. */
-    val h: Double = (0 until n).maxOf { interior[it + 1] - interior[it] }
+    public val h: Double = (0 until n).maxOf { interior[it + 1] - interior[it] }
 
     /**
      * Допуск включения точки разбиения: узел считается строго внутри подынтервала,
@@ -71,13 +71,13 @@ class Grid(val n: Int, interior: DoubleArray) {
      * ulp самих узлов (`ulp(1e3) ~ 2.3e-13`), и вычитание не меняет число ни на бит —
      * критерий вырождается в строгое сравнение и перестаёт быть допуском.
      */
-    val breakpointInclusionEps: Double = BREAKPOINT_INCLUSION_EPS_UNIT * maxOf(1.0, kotlin.math.abs(b - a))
+    public val breakpointInclusionEps: Double = BREAKPOINT_INCLUSION_EPS_UNIT * maxOf(1.0, kotlin.math.abs(b - a))
 
     /** Отображение математического индекса j в индекс массива. */
-    fun idx(j: Int): Int = j + 2
+    public fun idx(j: Int): Int = j + 2
 
     /** Узел x_j по математическому индексу j (-2..n+2). */
-    fun x(j: Int): Double = knots[idx(j)]
+    public fun x(j: Int): Double = knots[idx(j)]
 
     /**
      * Совпадают ли соседние узлы x_j и x_{j+1} (то есть вырожден ли интервал [x_j, x_{j+1}]).
@@ -97,7 +97,7 @@ class Grid(val n: Int, interior: DoubleArray) {
      *   x_{j+1} лежали в хранимом диапазоне -2..n+2).
      * @throws IllegalArgumentException если j вне -2..n+1.
      */
-    fun isCoincident(j: Int): Boolean {
+    public fun isCoincident(j: Int): Boolean {
         require(j in -2..n + 1) {
             "Grid.isCoincident: требуется j в -2..${n + 1} (пара x_j, x_{j+1}), получено j=$j"
         }
@@ -119,18 +119,18 @@ class Grid(val n: Int, interior: DoubleArray) {
      * (см. `VolterraOperator.cellNodes`), поэтому нарушение соглашения даст не ошибку,
      * а тихо неверные числа.
      */
-    val breakpoints: DoubleArray = DoubleArray(n + 1) { x(it) }
+    public val breakpoints: DoubleArray = DoubleArray(n + 1) { x(it) }
 
-    companion object {
+    public companion object {
         /**
          * Базовый (безразмерный) допуск включения узла, отнесённый к единичному отрезку.
          *
          * Фактический порог — [breakpointInclusionEps]; напрямую в сравнениях НЕ используется.
          */
-        const val BREAKPOINT_INCLUSION_EPS_UNIT = 1e-15
+        public const val BREAKPOINT_INCLUSION_EPS_UNIT: Double = 1e-15
 
         /** Равномерная сетка: x_j = a + (b-a) j/n. */
-        fun uniform(n: Int, a: Double = 0.0, b: Double = 1.0): Grid =
+        public fun uniform(n: Int, a: Double = 0.0, b: Double = 1.0): Grid =
             Grid(n, DoubleArray(n + 1) { a + (b - a) * it / n })
 
         /**
@@ -154,7 +154,7 @@ class Grid(val n: Int, interior: DoubleArray) {
          * @param amp амплитуда возмущения; допустимо любое значение, при котором узлы
          *   строго возрастают; иначе [Grid] бросит IllegalArgumentException.
          */
-        fun quasiUniform(n: Int, a: Double = 0.0, b: Double = 1.0, amp: Double = 0.04): Grid =
+        public fun quasiUniform(n: Int, a: Double = 0.0, b: Double = 1.0, amp: Double = 0.04): Grid =
             Grid(n, DoubleArray(n + 1) { i ->
                 val u = i.toDouble() / n
                 a + (b - a) * (u + amp * Math.sin(2.0 * Math.PI * u))
@@ -172,7 +172,7 @@ class Grid(val n: Int, interior: DoubleArray) {
          * @param n число внутренних интервалов (>= 2).
          * @param R отношение крайних шагов (> 0). R=1 вырождается в равномерную.
          */
-        fun geometric(n: Int, a: Double = 0.0, b: Double = 1.0, R: Double = 2.0): Grid {
+        public fun geometric(n: Int, a: Double = 0.0, b: Double = 1.0, R: Double = 2.0): Grid {
             require(n >= 2) { "geometric: требуется n >= 2, получено n=$n" }
             require(R > 0.0) { "geometric: требуется R > 0, получено R=$R" }
             val q = Math.pow(R, 1.0 / (n - 1))
@@ -207,7 +207,7 @@ class Grid(val n: Int, interior: DoubleArray) {
          * @param n число внутренних интервалов (>= 2).
          * @param ratio отношение соседних шагов (> 0). ratio=1 вырождается в равномерную.
          */
-        fun graded(n: Int, a: Double = 0.0, b: Double = 1.0, ratio: Double = 2.0): Grid {
+        public fun graded(n: Int, a: Double = 0.0, b: Double = 1.0, ratio: Double = 2.0): Grid {
             require(n >= 2) { "graded: требуется n >= 2, получено n=$n" }
             require(ratio > 0.0) { "graded: требуется ratio > 0, получено ratio=$ratio" }
             // Множители шаблона: чётный индекс -> 1, нечётный -> ratio (пары s, ratio*s).

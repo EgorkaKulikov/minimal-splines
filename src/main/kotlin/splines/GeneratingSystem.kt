@@ -26,11 +26,11 @@ import kotlin.math.sinh
  * @property psiDD вторая производная psi''(t) = T phi''(t);
  * @property det определитель матрицы T.
  */
-class LocalFrame(
-    val psi: (Double) -> DoubleArray,
-    val psiD: (Double) -> DoubleArray,
-    val psiDD: (Double) -> DoubleArray,
-    val det: Double,
+public class LocalFrame(
+    public val psi: (Double) -> DoubleArray,
+    public val psiD: (Double) -> DoubleArray,
+    public val psiDD: (Double) -> DoubleArray,
+    public val det: Double,
 )
 
 /**
@@ -40,27 +40,27 @@ class LocalFrame(
  * Необязательный параметр [localFrameFactory] задаёт локальное представление системы на интервале
  * (см. [localFrame]); для встроенных систем [B], [H], [T] он определён.
  */
-class GeneratingSystem(
-    val name: String,
-    val rho: (Double) -> Double,
-    val sigma: (Double) -> Double,
-    val rhoD: (Double) -> Double,
-    val sigmaD: (Double) -> Double,
-    val rhoDD: (Double) -> Double,
-    val sigmaDD: (Double) -> Double,
+public class GeneratingSystem(
+    public val name: String,
+    public val rho: (Double) -> Double,
+    public val sigma: (Double) -> Double,
+    public val rhoD: (Double) -> Double,
+    public val sigmaD: (Double) -> Double,
+    public val rhoDD: (Double) -> Double,
+    public val sigmaDD: (Double) -> Double,
     private val localFrameFactory: ((c: Double, h: Double) -> LocalFrame)? = null,
 ) {
     /** phi(t) = (1, rho(t), sigma(t)). */
-    fun phi(t: Double): DoubleArray = doubleArrayOf(1.0, rho(t), sigma(t))
+    public fun phi(t: Double): DoubleArray = doubleArrayOf(1.0, rho(t), sigma(t))
 
     /** phi'(t) = (0, rho'(t), sigma'(t)). */
-    fun phiD(t: Double): DoubleArray = doubleArrayOf(0.0, rhoD(t), sigmaD(t))
+    public fun phiD(t: Double): DoubleArray = doubleArrayOf(0.0, rhoD(t), sigmaD(t))
 
     /** phi''(t) = (0, rho''(t), sigma''(t)). */
-    fun phiDD(t: Double): DoubleArray = doubleArrayOf(0.0, rhoDD(t), sigmaDD(t))
+    public fun phiDD(t: Double): DoubleArray = doubleArrayOf(0.0, rhoDD(t), sigmaDD(t))
 
     /** Вронскиан det(phi, phi', phi'') — проверка невырожденности. */
-    fun wronskian(t: Double): Double {
+    public fun wronskian(t: Double): Double {
         val a = phi(t); val b = phiD(t); val c = phiDD(t)
         return a[0] * (b[1] * c[2] - b[2] * c[1]) +
             a[1] * (b[2] * c[0] - b[0] * c[2]) +
@@ -76,12 +76,12 @@ class GeneratingSystem(
      * не замкнутой относительно сдвига аргумента, локальное представление недоступно:
      * используется глобальное представление с T = I, то есть psi = phi.
      */
-    fun localFrame(c: Double, h: Double): LocalFrame =
+    public fun localFrame(c: Double, h: Double): LocalFrame =
         localFrameFactory?.invoke(c, h) ?: LocalFrame(::phi, ::phiD, ::phiDD, 1.0)
 
-    companion object {
+    public companion object {
         /** Полиномиальная phi^B(t) = (1, t, t^2)^T. */
-        val B = GeneratingSystem(
+        public val B: GeneratingSystem = GeneratingSystem(
             name = "B",
             rho = { t -> t }, sigma = { t -> t * t },
             rhoD = { 1.0 }, sigmaD = { t -> 2.0 * t },
@@ -90,7 +90,7 @@ class GeneratingSystem(
         )
 
         /** Гиперболическая phi^H(t) = (1, sinh t, cosh t)^T. */
-        val H = GeneratingSystem(
+        public val H: GeneratingSystem = GeneratingSystem(
             name = "H",
             rho = { t -> Math.sinh(t) }, sigma = { t -> Math.cosh(t) },
             rhoD = { t -> Math.cosh(t) }, sigmaD = { t -> Math.sinh(t) },
@@ -99,7 +99,7 @@ class GeneratingSystem(
         )
 
         /** Тригонометрическая phi^T(t) = (1, sin t, cos t)^T. */
-        val T = GeneratingSystem(
+        public val T: GeneratingSystem = GeneratingSystem(
             name = "T",
             rho = { t -> Math.sin(t) }, sigma = { t -> Math.cos(t) },
             rhoD = { t -> Math.cos(t) }, sigmaD = { t -> -Math.sin(t) },

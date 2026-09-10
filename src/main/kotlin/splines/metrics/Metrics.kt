@@ -12,7 +12,7 @@ import splines.Grid
  * Кратность измельчения контрольной сетки в [errorEh] по умолчанию: `100 * n` отрезков,
  * то есть `100n + 1` точка.
  */
-const val DEFAULT_CONTROL_REFINEMENT: Int = 100
+public const val DEFAULT_CONTROL_REFINEMENT: Int = 100
 
 /**
  * E_h = max|u*(t) - u_h(t)| на `refinement * n + 1` точках равномерной подсетки [a, b].
@@ -34,7 +34,7 @@ const val DEFAULT_CONTROL_REFINEMENT: Int = 100
  *   вернула бы NaN вместо ошибки.
  * @throws IllegalArgumentException если `refinement < 1` — по той же причине.
  */
-fun errorEh(
+public fun errorEh(
     exact: (Double) -> Double,
     eval: (Double) -> Double,
     grid: Grid,

@@ -27,17 +27,17 @@ import numerics.NumericsContext
  * достоверность обращения контролируется оценкой числа обусловленности T_k M_k (см. [MAX_CONDITION]):
  * вырожденная или слишком плохо обусловленная матрица приводит к исключению при построении.
  */
-class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: NumericsContext = NumericsContext.default()) {
-    companion object {
+public class MinimalSplineBasis(public val sys: GeneratingSystem, public val grid: Grid, ctx: NumericsContext = NumericsContext.default()) {
+    public companion object {
         /**
          * Наибольшее допустимое число обусловленности матрицы аппроксимационного соотношения
          * в локальных координатах интервала; при большем значении в обратной матрице сохраняется
          * менее восьми значащих цифр, и базис считается вырожденным на данном интервале.
          */
-        const val MAX_CONDITION = 1e8
+        public const val MAX_CONDITION: Double = 1e8
     }
 
-    val n = grid.n
+    public val n: Int = grid.n
 
     /** Локальные представления порождающей системы на интервалах (x_k, x_{k+1}), k = 0..n-1. */
     private val frames: Array<LocalFrame> = Array(n) { k -> sys.localFrame(grid.x(k), grid.x(k + 1) - grid.x(k)) }
@@ -177,10 +177,10 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      *
      * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]).
      */
-    fun interval(t: Double): Int = intervalOf(t)
+    public fun interval(t: Double): Int = intervalOf(t)
 
     /** Три активных значения omega_{k-2},omega_{k-1},omega_k в точке t (одно (T_k M_k)^{-1} psi_k(t)). */
-    fun activeOmega(k: Int, t: Double): DoubleArray {
+    public fun activeOmega(k: Int, t: Double): DoubleArray {
         val inv = invM[k]
         val p = frames[k].psi(t)
         return doubleArrayOf(
@@ -191,7 +191,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
     }
 
     /** Значение omega_j(t), j из [-2, n-1]. Носитель [x_j, x_{j+3}]; вне него 0. */
-    fun omega(j: Int, t: Double): Double {
+    public fun omega(j: Int, t: Double): Double {
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
@@ -202,7 +202,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
     }
 
     /** Производная omega_j'(t) (psi_k заменяется на psi_k'). Нужна для xi-функционалов. */
-    fun omegaDeriv(j: Int, t: Double): Double {
+    public fun omegaDeriv(j: Int, t: Double): Double {
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
@@ -217,7 +217,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      * (де Бура--Фикса r=0). Кусочно-постоянна по слоям; в узлах сетки omega_j'' терпит
      * разрыв (omega_j in C^1 \ C^2), поэтому значение в узле берётся по правому куску.
      */
-    fun omegaDeriv2(j: Int, t: Double): Double {
+    public fun omegaDeriv2(j: Int, t: Double): Double {
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
@@ -233,7 +233,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]):
      *   вне отрезка сплайн не определён, а прежнее поведение молча экстраполировало.
      */
-    fun evalSpline(c: DoubleArray, t: Double): Double {
+    public fun evalSpline(c: DoubleArray, t: Double): Double {
         val k = intervalOf(t)
         val w = activeOmega(k, t)
         return c[k] * w[0] + c[k + 1] * w[1] + c[k + 2] * w[2] // индексы k-2,k-1,k -> +2
@@ -244,7 +244,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      *
      * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]).
      */
-    fun evalSplineDeriv(c: DoubleArray, t: Double): Double {
+    public fun evalSplineDeriv(c: DoubleArray, t: Double): Double {
         val k = intervalOf(t)
         val inv = invM[k]
         val p = frames[k].psiD(t)
@@ -259,7 +259,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      *
      * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]).
      */
-    fun evalSplineDeriv2(c: DoubleArray, t: Double): Double {
+    public fun evalSplineDeriv2(c: DoubleArray, t: Double): Double {
         val k = intervalOf(t)
         val inv = invM[k]
         val p = frames[k].psiDD(t)
@@ -271,7 +271,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
 }
 
 /** Узлы x_j..x_{j+3} различны (нет слияния кратных узлов). */
-fun nonDegenerate(grid: Grid, j: Int): Boolean =
+public fun nonDegenerate(grid: Grid, j: Int): Boolean =
     grid.x(j) < grid.x(j + 1) && grid.x(j + 1) < grid.x(j + 2) && grid.x(j + 2) < grid.x(j + 3)
 
 /** Векторное произведение u x v в R^3 — локальная арифметика построения a_j. */

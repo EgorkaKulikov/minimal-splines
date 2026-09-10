@@ -6,6 +6,7 @@ import numerics.DenseMatrix
 import numerics.LinearAlgebra
 import numerics.NumericsContext
 import splines.DEGENERACY_RELATIVE_EPS
+import splines.Grid
 import splines.MinimalSplineBasis
 import splines.cancellationScale
 import splines.isSignificant
@@ -21,14 +22,14 @@ import splines.isSignificant
  * только значения f; для xi нужна и производная f'. Поэтому интерфейс принимает
  * функцию и её производную; семейства без производных её просто игнорируют.
  */
-interface ApproxFunctional {
+public interface ApproxFunctional {
     /**
      * chi_j(f) по функции f, её первой производной fD и второй производной fDD.
      * Семейства без производных (theta,mu,lambda) игнорируют fD/fDD; xi^<1>,xi^<2>
      * используют только fD; xi^<0> использует и fDD. fDD по умолчанию нулевая, чтобы
      * не ломать существующие двухаргументные вызовы (theta/mu/lambda и xi^<1>).
      */
-    fun apply(f: (Double) -> Double, fD: (Double) -> Double, fDD: (Double) -> Double = { 0.0 }): Double
+    public fun apply(f: (Double) -> Double, fD: (Double) -> Double, fDD: (Double) -> Double = { 0.0 }): Double
 
     /**
      * Сумма модулей коэффициентов В ПРЕДСТАВЛЕНИИ функционала — как он выписан
@@ -46,11 +47,11 @@ interface ApproxFunctional {
      * ДИАГНОСТИКА представления (порядок коэффициентов, вырождение, регрессии
      * формул), но не как норма относительно возмущений данных.
      */
-    fun absSum(): Double
+    public fun absSum(): Double
 }
 
 /** Удобная обёртка: chi_j(f) без явных производных (производные = 0). */
-fun ApproxFunctional.apply(f: (Double) -> Double): Double = apply(f, { 0.0 }, { 0.0 })
+public fun ApproxFunctional.apply(f: (Double) -> Double): Double = apply(f, { 0.0 }, { 0.0 })
 
 /**
  * Семейство (квази)проекционных функционалов {chi_j}_{j=-2}^{n-1} и (квази)проектор
@@ -60,9 +61,9 @@ fun ApproxFunctional.apply(f: (Double) -> Double): Double = apply(f, { 0.0 }, { 
  *           редукция Кулкарни (L7) применима. false для квазиинтерполянтов (mu, lambda).
  * @property usesDerivative true для xi (работа в C^1).
  */
-abstract class FunctionalFamily(
-    val basis: MinimalSplineBasis,
-    val name: String,
+public abstract class FunctionalFamily(
+    public val basis: MinimalSplineBasis,
+    public val name: String,
     /**
      * Контекст численных вычислений: семейства theta/mu/lambda решают в конструкторе
      * крошечные СЛАУ (3x3 и 5x5) и обязаны делать это ТЕМ ЖЕ бэкендом, что и решатель.
@@ -75,21 +76,21 @@ abstract class FunctionalFamily(
      * отвергала бы ЛЮБОЙ решатель с недефолтным контекстом на этих семействах —
      * то есть асимметрия превратилась бы из косметической в функциональный дефект.
      */
-    val ctx: NumericsContext = NumericsContext.default(),
+    public val ctx: NumericsContext = NumericsContext.default(),
 ) {
-    val grid = basis.grid
-    val n = grid.n
-    abstract val isProjector: Boolean
-    abstract val usesDerivative: Boolean
+    public val grid: Grid = basis.grid
+    public val n: Int = grid.n
+    public abstract val isProjector: Boolean
+    public abstract val usesDerivative: Boolean
 
     /** true для семейств, требующих ВТОРУЮ производную образа (xi^<0>). */
-    open val usesSecondDerivative: Boolean = false
+    public open val usesSecondDerivative: Boolean = false
 
     /** Функционал chi_j, j = -2..n-1. */
-    abstract fun chi(j: Int): ApproxFunctional
+    public abstract fun chi(j: Int): ApproxFunctional
 
     /** Коэффициенты проекции P_chi g = sum chi_j(g) omega_j: вектор (chi_j(g)) размера n+2. */
-    fun projectorCoeffs(
+    public fun projectorCoeffs(
         g: (Double) -> Double,
         gD: (Double) -> Double = { 0.0 },
         gDD: (Double) -> Double = { 0.0 },
@@ -116,7 +117,7 @@ abstract class FunctionalFamily(
      * не попадает по типу, и оценка там корректна. Расширение типа параметра
      * до общего [FunctionalFamily] потребует пересмотра этой оценки.
      */
-    fun cChi(): Double = (-2..n - 1).maxOf { chi(it).absSum() }
+    public fun cChi(): Double = (-2..n - 1).maxOf { chi(it).absSum() }
 }
 
 // ----------------------------------------------------------------------------
@@ -135,7 +136,7 @@ abstract class FunctionalFamily(
  *   Записей в эти массивы в проекте нет ни одной.
  * @property coeffs коэффициенты при значениях в [nodes]. READ-ONLY по соглашению.
  */
-class ValueFunctional(val nodes: DoubleArray, val coeffs: DoubleArray) : ApproxFunctional {
+public class ValueFunctional(public val nodes: DoubleArray, public val coeffs: DoubleArray) : ApproxFunctional {
     init { require(nodes.size == coeffs.size) }
     override fun apply(f: (Double) -> Double, fD: (Double) -> Double, fDD: (Double) -> Double): Double {
         var s = 0.0
@@ -163,12 +164,12 @@ class ValueFunctional(val nodes: DoubleArray, val coeffs: DoubleArray) : ApproxF
  * Кулкарни. Краевые функционалы (j = -2 и j = n-1) — чистые значения f(x_0) и f(x_n);
  * это не допущение реализации, а часть определения в источнике.
  */
-class ProjFunctionals(
+public class ProjFunctionals(
     basis: MinimalSplineBasis,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, "theta", ctx) {
-    override val isProjector = true
-    override val usesDerivative = false
+    override val isProjector: Boolean = true
+    override val usesDerivative: Boolean = false
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildTheta(it - 2) }
     override fun chi(j: Int): ApproxFunctional = funcs[j + 2]
 
@@ -250,7 +251,7 @@ class ProjFunctionals(
  * Функционал вида xi(u) = u(node) + cD * u'(node) (де Бура--Фикса r=1).
  * При cD=0 сводится к чистому значению — краевой функционал u(x_0)/u(x_n).
  */
-class DerivFunctional(val node: Double, val cD: Double) : ApproxFunctional {
+public class DerivFunctional(public val node: Double, public val cD: Double) : ApproxFunctional {
     override fun apply(f: (Double) -> Double, fD: (Double) -> Double, fDD: (Double) -> Double): Double =
         f(node) + cD * fD(node)
 
@@ -276,7 +277,7 @@ class DerivFunctional(val node: Double, val cD: Double) : ApproxFunctional {
  * Функционал вида xi^<0>(u) = u(node) + c1*u'(node) + c2*u''(node) (де Бура--Фикса r=0):
  * использует значение, ПЕРВУЮ и ВТОРУЮ производные в одном узле.
  */
-class SecondDerivFunctional(val node: Double, val c1: Double, val c2: Double) : ApproxFunctional {
+public class SecondDerivFunctional(public val node: Double, public val c1: Double, public val c2: Double) : ApproxFunctional {
     override fun apply(f: (Double) -> Double, fD: (Double) -> Double, fDD: (Double) -> Double): Double =
         f(node) + c1 * fD(node) + c2 * fDD(node)
 
@@ -323,15 +324,15 @@ class SecondDerivFunctional(val node: Double, val c1: Double, val c2: Double) : 
  * случай для xi явно не выписан. Допущение закрыто эмпирически — тестом
  * биортогональности, включающим краевые индексы для всех r и всех базисов.
  */
-class DeBoorFixFunctionals(
+public class DeBoorFixFunctionals(
     basis: MinimalSplineBasis,
-    val r: Int = 1,
+    public val r: Int = 1,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, if (r == 1) "xi" else "xi<$r>", ctx) {
     init { require(r in 0..2) { "DeBoorFix: r must be in {0,1,2}, got $r" } }
-    override val isProjector = true
-    override val usesDerivative = true
-    override val usesSecondDerivative = (r == 0)
+    override val isProjector: Boolean = true
+    override val usesDerivative: Boolean = true
+    override val usesSecondDerivative: Boolean = (r == 0)
     private val sys = basis.sys
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildXi(it - 2) }
     override fun chi(j: Int): ApproxFunctional = funcs[j + 2]
@@ -481,14 +482,14 @@ class DeBoorFixFunctionals(
  * конце носителя, где сам сплайн и его первая производная обращаются в ноль, и замена
  * второй производной разностью не воспроизводит порождающую систему даже при h → 0.
  */
-class DiscreteDeBoorFixFunctionals(
+public class DiscreteDeBoorFixFunctionals(
     basis: MinimalSplineBasis,
-    val r: Int = 1,
+    public val r: Int = 1,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, if (r == 1) "xitilde" else "xitilde<$r>", ctx) {
     init { require(r in 1..2) { "DiscreteDeBoorFix: r must be in {1,2}, got $r" } }
-    override val isProjector = false
-    override val usesDerivative = false
+    override val isProjector: Boolean = false
+    override val usesDerivative: Boolean = false
     // Контекст пробрасывается во вложенное семейство: иначе `raw.ctx` молча
     // оставался бы дефолтным и расходился с контекстом обёртки.
     private val raw = DeBoorFixFunctionals(basis, r, ctx)
@@ -547,13 +548,13 @@ class DiscreteDeBoorFixFunctionals(
  *
  * @param theta параметр размещения узлов вспомогательной сетки в (0, 1)
  */
-class AveragingFunctionals(
+public class AveragingFunctionals(
     basis: MinimalSplineBasis,
-    val theta: Double = 0.5,
+    public val theta: Double = 0.5,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, "mu", ctx) {
-    override val isProjector = false
-    override val usesDerivative = false
+    override val isProjector: Boolean = false
+    override val usesDerivative: Boolean = false
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildMu(it - 2) }
     override fun chi(j: Int): ApproxFunctional = funcs[j + 2]
 
@@ -604,13 +605,13 @@ class AveragingFunctionals(
  *
  * @param thetaHat параметр размещения средней точки в (0, 1); значение 1/2 — выбор реализации
  */
-class ThreePointFunctionals(
+public class ThreePointFunctionals(
     basis: MinimalSplineBasis,
-    val thetaHat: Double = 0.5,
+    public val thetaHat: Double = 0.5,
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, "lambda", ctx) {
-    override val isProjector = false
-    override val usesDerivative = false
+    override val isProjector: Boolean = false
+    override val usesDerivative: Boolean = false
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildLambda(it - 2) }
     override fun chi(j: Int): ApproxFunctional = funcs[j + 2]
 
