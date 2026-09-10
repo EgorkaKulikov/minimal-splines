@@ -4,7 +4,13 @@ import numerics.Conditioning
 import numerics.DenseMatrix
 import numerics.backend.Backends
 import org.junit.jupiter.api.Tag
+import splines.functionals.AveragingFunctionals
+import splines.functionals.DeBoorFixFunctionals
+import splines.functionals.DiscreteDeBoorFixFunctionals
+import splines.functionals.FunctionalFamily
 import splines.functionals.ProjFunctionals
+import splines.functionals.ThreePointFunctionals
+import splines.metrics.errorEh
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.cosh
@@ -115,5 +121,57 @@ class ConditioningDiagnosticTest {
             }
             assertTrue(err <= 1e-9, "${sys.name} n=10⁴: погрешность на span phi $err")
         }
+    }
+
+    /**
+     * Все пять семейств функционалов строятся для B на [0,1] при n = 10⁴ и на [100,101] при n = 100,
+     * и каждый квазипроектор воспроизводит f = 1 + 2 rho + 3 sigma с точностью 10⁻⁹ max|f|
+     * в метрике errorEh. Для xitilde точность на span phi проверяется вне краевого слоя из трёх
+     * шагов: у краёв производная заменяется односторонней разностью по кратным узлам, и погрешность
+     * на span phi там порядка h² по построению семейства; её величина записывается в отчёт.
+     * Результат — TSV `build/reports/functionals-diagnostic.tsv`.
+     */
+    @Test
+    fun functionalsBuildOnFineGridsAndShiftedIntervals() {
+        val sys = GeneratingSystem.B
+        val lines = arrayListOf("a\tb\tn\tfamily\tstatus\trelErr\trelErrInterior")
+        val failures = ArrayList<String>()
+        for (grid in listOf(Grid.uniform(10000, 0.0, 1.0), Grid.uniform(100, 100.0, 101.0))) {
+            val basis = MinimalSplineBasis(sys, grid)
+            val f = { t: Double -> sys.phi(t).let { it[0] + 2.0 * it[1] + 3.0 * it[2] } }
+            val fD = { t: Double -> sys.phiD(t).let { 2.0 * it[1] + 3.0 * it[2] } }
+            val fDD = { t: Double -> sys.phiDD(t).let { 2.0 * it[1] + 3.0 * it[2] } }
+            var fMax = 0.0
+            for (i in 0..100) fMax = max(fMax, abs(f(grid.a + (grid.b - grid.a) * i / 100.0)))
+            val families: List<Pair<String, () -> FunctionalFamily>> = listOf(
+                "theta" to { ProjFunctionals(basis) },
+                "xi" to { DeBoorFixFunctionals(basis, r = 1) },
+                "xitilde" to { DiscreteDeBoorFixFunctionals(basis, r = 1) },
+                "mu" to { AveragingFunctionals(basis) },
+                "lambda" to { ThreePointFunctionals(basis) },
+            )
+            for ((name, make) in families) {
+                val tag = "B[${grid.a},${grid.b}] n=${grid.n} $name"
+                val family = try { make() } catch (e: Exception) {
+                    lines += "${grid.a}\t${grid.b}\t${grid.n}\t$name\tfailed: ${e.message}\t-\t-"
+                    failures += "$tag: не строится (${e.message})"
+                    continue
+                }
+                val c = family.projectorCoeffs(f, fD, fDD)
+                val relErr = errorEh(f, { t -> basis.evalSpline(c, t) }, grid, refinement = 10) / fMax
+                val h = (grid.b - grid.a) / grid.n
+                var interior = 0.0
+                for (i in 0..(10 * grid.n)) {
+                    val t = grid.a + (grid.b - grid.a) * i / (10 * grid.n)
+                    if (t >= grid.a + 3 * h && t <= grid.b - 3 * h) interior = max(interior, abs(basis.evalSpline(c, t) - f(t)))
+                }
+                val relErrInterior = interior / fMax
+                lines += "${grid.a}\t${grid.b}\t${grid.n}\t$name\tok\t${"%.3e".format(relErr)}\t${"%.3e".format(relErrInterior)}"
+                val checked = if (name == "xitilde") relErrInterior else relErr
+                if (checked > 1e-9) failures += "$tag: относительная погрешность на span phi $checked"
+            }
+        }
+        write("functionals-diagnostic.tsv", lines)
+        assertTrue(failures.isEmpty(), "семейства функционалов на мелкой сетке и смещённом отрезке: $failures")
     }
 }

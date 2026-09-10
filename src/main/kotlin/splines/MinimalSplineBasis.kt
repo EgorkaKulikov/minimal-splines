@@ -42,6 +42,9 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
     /** Локальные представления порождающей системы на интервалах (x_k, x_{k+1}), k = 0..n-1. */
     private val frames: Array<LocalFrame> = Array(n) { k -> sys.localFrame(grid.x(k), grid.x(k + 1) - grid.x(k)) }
 
+    /** Локальное представление psi_k = T_k phi для интервала (x_k, x_{k+1}); используется семействами функционалов. */
+    internal fun frame(k: Int): LocalFrame = frames[k]
+
     /** Обратные матрицы (T_k M_k)^{-1} по столбцам: элемент (slot, p) хранится в data[slot + 3 p]. */
     private val invM: Array<DoubleArray> = Array(n) { k -> invertApproximationMatrix(k, ctx) }
 
@@ -94,7 +97,7 @@ class MinimalSplineBasis(val sys: GeneratingSystem, val grid: Grid, ctx: Numeric
      * скалярных произведений с общей нормалью phi(x_{j+2}) × phi'(x_{j+2}), поэтому при замене
      * phi -> T phi вектор переходит в T a_j; это позволяет вычислять столбцы T_k M_k той же формулой.
      */
-    private fun computeA(j: Int, phi: (Double) -> DoubleArray, phiD: (Double) -> DoubleArray): DoubleArray {
+    internal fun computeA(j: Int, phi: (Double) -> DoubleArray, phiD: (Double) -> DoubleArray): DoubleArray {
         val xj1 = grid.x(j + 1)
         val phiJ1 = phi(xj1)
         if (grid.isCoincident(j + 1)) return phiJ1 // тройной узел на краю: x_{j+1} = x_{j+2}

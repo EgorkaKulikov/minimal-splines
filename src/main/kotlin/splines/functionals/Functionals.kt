@@ -554,7 +554,6 @@ class AveragingFunctionals(
 ) : FunctionalFamily(basis, "mu", ctx) {
     override val isProjector = false
     override val usesDerivative = false
-    private val sys = basis.sys
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildMu(it - 2) }
     override fun chi(j: Int): ApproxFunctional = funcs[j + 2]
 
@@ -570,13 +569,17 @@ class AveragingFunctionals(
         if (j == n - 1) return ValueFunctional(doubleArrayOf(grid.x(n)), doubleArrayOf(1.0))
         val ym = yNode(j - 1); val y0 = yNode(j); val yp = yNode(j + 1)
         val ys = doubleArrayOf(ym, y0, yp)
-        val matrix = DenseMatrix.build(3, 3) { r, c ->
-            when (r) { 0 -> 1.0; 1 -> sys.rho(ys[c]); else -> sys.sigma(ys[c]) }
-        }
-        // Вектор a^N_j аппроксимационного соотношения — тот же самый, по которому строится
-        // базис; ранее здесь жила его дословная копия (`aN`).
-        val coeff = LinearAlgebra.solve(matrix, basis.computeA(j), ctx.backend)
-        return ValueFunctional(doubleArrayOf(ym, y0, yp), coeff)
+        // Система (phi(y_{j-1}) | phi(y_j) | phi(y_{j+1})) mu = a_j записывается в локальных
+        // координатах интервала (x_{j+1}, x_{j+2}) — среднего интервала носителя omega_j:
+        // левое умножение обеих частей на T_{j+1} не меняет решения, а обусловленность матрицы
+        // перестаёт зависеть от шага сетки и положения отрезка. Все три точки y_q лежат в
+        // пределах двух шагов от x_{j+1}, где psi = O(1). Правая часть T_{j+1} a_j получается
+        // той же формулой аппроксимационного соотношения, что и столбцы T_k M_k в базисе.
+        val frame = basis.frame(j + 1)
+        val cols = Array(3) { q -> frame.psi(ys[q]) }
+        val matrix = DenseMatrix.build(3, 3) { r, c -> cols[c][r] }
+        val coeff = LinearAlgebra.solve(matrix, basis.computeA(j, frame.psi, frame.psiD), ctx.backend)
+        return ValueFunctional(ys, coeff)
     }
 }
 
