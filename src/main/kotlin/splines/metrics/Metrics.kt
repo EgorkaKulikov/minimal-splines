@@ -45,7 +45,11 @@ public fun errorEh(
     val m = refinement * grid.n
     var e = 0.0
     for (i in 0..m) {
-        val t = grid.a + (grid.b - grid.a) * i / m
+        // Произведение (b - a)·i/m при i = m может округлиться правее b на единицу
+        // последнего разряда (например, b = 0.013, m = 130); сплайн вне [a, b] не определён,
+        // поэтому контрольная точка ограничивается отрезком сетки. Для точек внутри
+        // отрезка ограничение не меняет ни одного бита.
+        val t = (grid.a + (grid.b - grid.a) * i / m).coerceIn(grid.a, grid.b)
         e = maxOf(e, abs(exact(t) - eval(t)))
     }
     return e
