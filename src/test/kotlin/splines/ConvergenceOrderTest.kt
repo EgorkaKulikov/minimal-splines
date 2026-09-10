@@ -114,29 +114,6 @@ class ConvergenceOrderTest {
         return map
     }
 
-    /**
-     * Максимум |exact − eval| по контрольной сетке `refinement·n + 1` точек, из которой исключён
-     * краевой слой ширины `layer·h` с каждой стороны (h — максимальный шаг сетки).
-     */
-    private fun interiorErrorEh(
-        exact: (Double) -> Double,
-        eval: (Double) -> Double,
-        grid: Grid,
-        layer: Int = 3,
-        refinement: Int = DEFAULT_CONTROL_REFINEMENT,
-    ): Double {
-        val m = refinement * grid.n
-        val lo = grid.a + layer * grid.h
-        val hi = grid.b - layer * grid.h
-        var mx = 0.0
-        for (i in 0..m) {
-            val t = grid.a + (grid.b - grid.a) * i / m
-            if (t < lo || t > hi) continue
-            mx = max(mx, abs(exact(t) - eval(t)))
-        }
-        return mx
-    }
-
     private fun fmt(s: Series): String =
         ns.indices.joinToString(", ") { i -> "n=${ns[i]}: E=${"%.3e".format(s.eh[i])} p=${"%.3f".format(s.ord[i])}" }
 
