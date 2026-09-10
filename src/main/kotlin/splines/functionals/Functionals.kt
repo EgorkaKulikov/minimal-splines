@@ -318,6 +318,11 @@ public class SecondDerivFunctional(public val node: Double, public val c1: Doubl
  * Ошибка в коэффициентах `C1_j`/`C2_j` разрушила бы биортогональность и уронила этот
  * тест, но совпадение с источником символ в символ он не гарантирует.
  *
+ * Коэффициенты вычисляются в локальных координатах интервала (`LocalFrame`), что
+ * исключает сокращение при малой длине отрезка или его удалении от нуля; результат
+ * не зависит от выбора координат, поскольку функционал определён условием
+ * биортогональности к базису.
+ *
  * ОГРАНИЧЕНИЕ (важно при выборе семейства): краевые функционалы j = -2 и j = n-1
  * взяты как чистые значения u(x_0) и u(x_n). В отличие от семейства theta, где это
  * часть определения в источнике, здесь это ДОПУЩЕНИЕ РЕАЛИЗАЦИИ: в публикации краевой
@@ -333,7 +338,6 @@ public class DeBoorFixFunctionals(
     override val isProjector: Boolean = true
     override val usesDerivative: Boolean = true
     override val usesSecondDerivative: Boolean = (r == 0)
-    private val sys = basis.sys
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildXi(it - 2) }
     override fun chi(j: Int): ApproxFunctional = funcs[j + 2]
 
@@ -350,10 +354,16 @@ public class DeBoorFixFunctionals(
     /** xi^<1>_j: узел x_{j+1}, коэффициент C1_j. */
     private fun buildXi1(j: Int): ApproxFunctional {
         val x1 = grid.x(j + 1); val x2 = grid.x(j + 2)
-        val rho1 = sys.rho(x1); val rho2 = sys.rho(x2)
-        val sig1 = sys.sigma(x1); val sig2 = sys.sigma(x2)
-        val rhoD1 = sys.rhoD(x1); val rhoD2 = sys.rhoD(x2)
-        val sigD1 = sys.sigmaD(x1); val sigD2 = sys.sigmaD(x2)
+        // Компоненты psi_1, psi_2 локальной системы интервала (x_{j+1}, x_{j+2}) и их
+        // производные: формула та же, что для rho, sigma, поскольку psi = T phi с первой
+        // строкой T, равной (1, 0, 0), порождает то же пространство.
+        val fr = basis.frame(j + 1)
+        val p1 = fr.psi(x1); val p2 = fr.psi(x2)
+        val d1 = fr.psiD(x1); val d2 = fr.psiD(x2)
+        val rho1 = p1[1]; val rho2 = p2[1]
+        val sig1 = p1[2]; val sig2 = p2[2]
+        val rhoD1 = d1[1]; val rhoD2 = d2[1]
+        val sigD1 = d1[2]; val sigD2 = d2[2]
         // Вронскиан W_j — разность двух произведений; масштаб = сумма их модулей.
         // Так проверка не зависит от масштаба самих rho', sigma' (для системы H они
         // растут как cosh, для T ограничены единицей, а на мелкой сетке разность мала).
@@ -370,10 +380,16 @@ public class DeBoorFixFunctionals(
     /** xi^<2>_j: узел x_{j+2}, коэффициент C2_j (тот же знаменатель W_j, штрихи в x_{j+1}). */
     private fun buildXi2(j: Int): ApproxFunctional {
         val x1 = grid.x(j + 1); val x2 = grid.x(j + 2)
-        val rho1 = sys.rho(x1); val rho2 = sys.rho(x2)
-        val sig1 = sys.sigma(x1); val sig2 = sys.sigma(x2)
-        val rhoD1 = sys.rhoD(x1); val rhoD2 = sys.rhoD(x2)
-        val sigD1 = sys.sigmaD(x1); val sigD2 = sys.sigmaD(x2)
+        // Компоненты psi_1, psi_2 локальной системы интервала (x_{j+1}, x_{j+2}) и их
+        // производные: формула та же, что для rho, sigma, поскольку psi = T phi с первой
+        // строкой T, равной (1, 0, 0), порождает то же пространство.
+        val fr = basis.frame(j + 1)
+        val p1 = fr.psi(x1); val p2 = fr.psi(x2)
+        val d1 = fr.psiD(x1); val d2 = fr.psiD(x2)
+        val rho1 = p1[1]; val rho2 = p2[1]
+        val sig1 = p1[2]; val sig2 = p2[2]
+        val rhoD1 = d1[1]; val rhoD2 = d2[1]
+        val sigD1 = d1[2]; val sigD2 = d2[2]
         // Тот же вронскиан, что и в buildXi1: масштаб — сумма модулей двух произведений.
         val denom = rhoD2 * sigD1 - rhoD1 * sigD2
         val denomScale = cancellationScale(rhoD2 * sigD1, rhoD1 * sigD2)
@@ -391,14 +407,19 @@ public class DeBoorFixFunctionals(
      */
     private fun buildXi0(j: Int): ApproxFunctional {
         val xj = grid.x(j); val xj1 = grid.x(j + 1); val xj2 = grid.x(j + 2)
-        // Значения rho, sigma и производные в трёх узлах.
-        val rj = sys.rho(xj); val sj = sys.sigma(xj)
-        val rDj = sys.rhoD(xj); val sDj = sys.sigmaD(xj)
-        val rDDj = sys.rhoDD(xj); val sDDj = sys.sigmaDD(xj)
-        val rj1 = sys.rho(xj1); val sj1 = sys.sigma(xj1)
-        val rDj1 = sys.rhoD(xj1); val sDj1 = sys.sigmaD(xj1)
-        val rj2 = sys.rho(xj2); val sj2 = sys.sigma(xj2)
-        val rDj2 = sys.rhoD(xj2); val sDj2 = sys.sigmaD(xj2)
+        // Значения psi_1, psi_2 и производные в трёх узлах в локальных координатах
+        // интервала (x_{j+1}, x_{j+2}); узел x_j отстоит от начала отсчёта на h_j.
+        val fr = basis.frame(j + 1)
+        val pj = fr.psi(xj); val dj = fr.psiD(xj); val ddj = fr.psiDD(xj)
+        val pj1 = fr.psi(xj1); val dj1 = fr.psiD(xj1)
+        val pj2 = fr.psi(xj2); val dj2 = fr.psiD(xj2)
+        val rj = pj[1]; val sj = pj[2]
+        val rDj = dj[1]; val sDj = dj[2]
+        val rDDj = ddj[1]; val sDDj = ddj[2]
+        val rj1 = pj1[1]; val sj1 = pj1[2]
+        val rDj1 = dj1[1]; val sDj1 = dj1[2]
+        val rj2 = pj2[1]; val sj2 = pj2[2]
+        val rDj2 = dj2[1]; val sDj2 = dj2[2]
 
         // Delta_j — ПРОИЗВЕДЕНИЕ двух миноров 2x2, и вырождается оно ровно тогда, когда
         // вырожден один из множителей. Поэтому проверяются множители по отдельности,

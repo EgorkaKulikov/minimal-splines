@@ -124,19 +124,24 @@ class ConditioningDiagnosticTest {
     }
 
     /**
-     * Все пять семейств функционалов строятся для B на [0,1] при n = 10⁴ и на [100,101] при n = 100,
+     * Все пять семейств функционалов строятся для B на [0,1] при n = 10⁴ и для B, H, T на [100,101]
+     * при n = 100,
      * и каждый квазипроектор воспроизводит f = 1 + 2 rho + 3 sigma с точностью 10⁻⁹ max|f|
-     * в метрике errorEh. Для xitilde точность на span phi проверяется вне краевого слоя из трёх
-     * шагов: у краёв производная заменяется односторонней разностью по кратным узлам, и погрешность
-     * на span phi там порядка h² по построению семейства; её величина записывается в отчёт.
+     * в метрике errorEh. Для xitilde точность на span phi проверяется только для B и вне краевого
+     * слоя из трёх шагов: на равномерной сетке центральная разность воспроизводит производную
+     * квадратичного многочлена точно, а для H и T даёт погрешность порядка h³ по построению семейства
+     * (порядок проверяется в ConvergenceOrderTest); у краёв производная заменяется односторонней
+     * разностью по кратным узлам, и погрешность на span phi там порядка h². Для H и T у xitilde
+     * проверяется лишь построение, погрешность записывается в отчёт.
      * Результат — TSV `build/reports/functionals-diagnostic.tsv`.
      */
     @Test
     fun functionalsBuildOnFineGridsAndShiftedIntervals() {
-        val sys = GeneratingSystem.B
-        val lines = arrayListOf("a\tb\tn\tfamily\tstatus\trelErr\trelErrInterior")
+        val lines = arrayListOf("system\ta\tb\tn\tfamily\tstatus\trelErr\trelErrInterior")
         val failures = ArrayList<String>()
-        for (grid in listOf(Grid.uniform(10000, 0.0, 1.0), Grid.uniform(100, 100.0, 101.0))) {
+        val cases = listOf(GeneratingSystem.B to Grid.uniform(10000, 0.0, 1.0)) +
+            listOf(GeneratingSystem.B, GeneratingSystem.H, GeneratingSystem.T).map { it to Grid.uniform(100, 100.0, 101.0) }
+        for ((sys, grid) in cases) {
             val basis = MinimalSplineBasis(sys, grid)
             val f = { t: Double -> sys.phi(t).let { it[0] + 2.0 * it[1] + 3.0 * it[2] } }
             val fD = { t: Double -> sys.phiD(t).let { 2.0 * it[1] + 3.0 * it[2] } }
@@ -151,9 +156,9 @@ class ConditioningDiagnosticTest {
                 "lambda" to { ThreePointFunctionals(basis) },
             )
             for ((name, make) in families) {
-                val tag = "B[${grid.a},${grid.b}] n=${grid.n} $name"
+                val tag = "${sys.name}[${grid.a},${grid.b}] n=${grid.n} $name"
                 val family = try { make() } catch (e: Exception) {
-                    lines += "${grid.a}\t${grid.b}\t${grid.n}\t$name\tfailed: ${e.message}\t-\t-"
+                    lines += "${sys.name}\t${grid.a}\t${grid.b}\t${grid.n}\t$name\tfailed: ${e.message}\t-\t-"
                     failures += "$tag: не строится (${e.message})"
                     continue
                 }
@@ -166,9 +171,10 @@ class ConditioningDiagnosticTest {
                     if (t >= grid.a + 3 * h && t <= grid.b - 3 * h) interior = max(interior, abs(basis.evalSpline(c, t) - f(t)))
                 }
                 val relErrInterior = interior / fMax
-                lines += "${grid.a}\t${grid.b}\t${grid.n}\t$name\tok\t${"%.3e".format(relErr)}\t${"%.3e".format(relErrInterior)}"
+                lines += "${sys.name}\t${grid.a}\t${grid.b}\t${grid.n}\t$name\tok\t${"%.3e".format(relErr)}\t${"%.3e".format(relErrInterior)}"
                 val checked = if (name == "xitilde") relErrInterior else relErr
-                if (checked > 1e-9) failures += "$tag: относительная погрешность на span phi $checked"
+                val exactOnSpan = name != "xitilde" || sys === GeneratingSystem.B
+                if (exactOnSpan && checked > 1e-9) failures += "$tag: относительная погрешность на span phi $checked"
             }
         }
         write("functionals-diagnostic.tsv", lines)
