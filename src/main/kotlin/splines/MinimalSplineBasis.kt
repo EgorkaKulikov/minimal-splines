@@ -57,8 +57,26 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
     /** Матрица T_k M_k = (T_k a_{k-2}|T_k a_{k-1}|T_k a_k) в локальных координатах интервала k; именно она обращается. */
     internal fun localApproximationMatrix(k: Int): DenseMatrix {
         val frame = frames[k]
+        requireFiniteFrame(k, frame)
         val cols = Array(3) { j -> computeA(k - 2 + j, frame.psi, frame.psiD) }
         return DenseMatrix.build(3, 3) { i, j -> cols[j][i] }
+    }
+
+    /**
+     * Проверка представимости порождающей системы в double на интервале k: столбцы a_{k-2}, a_{k-1}, a_k
+     * строятся по значениям psi_k, psi_k' в узлах x_{k-1}, ..., x_{k+2}, и все они должны быть финитны.
+     * Для систем H и T с локальным масштабом l = min(h, 1) значения sinh(u/l) переполняются уже при
+     * u/l > 710, то есть при шаге h > 355 для H; без этой проверки переполнение проявлялось бы как
+     * NaN в сообщении о вырожденности аппроксимационного соотношения.
+     */
+    private fun requireFiniteFrame(k: Int, frame: LocalFrame) {
+        for (m in k - 1..k + 2) {
+            val x = grid.x(m)
+            require(allFinite(frame.psi(x)) && allFinite(frame.psiD(x))) {
+                "Порождающая система ${sys.name} переполняется на интервале $k = [${grid.x(k)}, ${grid.x(k + 1)}]: " +
+                    "значения psi_k или psi_k' в узле x_$m = $x нефинитны; уменьшите шаг сетки или длину отрезка"
+            }
+        }
     }
 
     private fun invertApproximationMatrix(k: Int, ctx: NumericsContext): DoubleArray {
@@ -86,7 +104,9 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
      * в глобальных координатах phi.
      *
      * `internal`, а не `private`: тот же вектор a^N_j нужен семейству усредняющих
-     * функционалов mu (`AveragingFunctionals`).
+     * функционалов mu (`AveragingFunctionals`). В построении базиса не участвует: столбцы T_k M_k
+     * вычисляются через локальное представление [frame]. Для систем H и T на отрезках с |t| > 700
+     * глобальные значения sinh, cosh переполняются, и метод неприменим (см. [requireFiniteFrame]).
      */
     internal fun computeA(j: Int): DoubleArray = computeA(j, sys::phi, sys::phiD)
 
@@ -109,6 +129,10 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
         // порог здесь неприменим: denom ~ h, то есть зависит от масштаба отрезка.
         val denom = dot(dJ2, phiDJ1)
         val denomScale = dot3Scale(dJ2, phiDJ1)
+        require(denomScale.isFinite()) {
+            "computeA(j=$j): произведения значений phi и phi' в узлах x_{j+1}=$xj1, x_{j+2}=$xj2 " +
+                "переполняются (масштаб $denomScale); уменьшите шаг сетки или длину отрезка"
+        }
         require(isSignificant(denom, denomScale)) {
             "computeA(j=$j): degenerate approximation relation, dot(dJ2, phiDJ1)=$denom, " +
                 "scale=$denomScale (значимость потеряна: порог $DEGENERACY_RELATIVE_EPS)"
@@ -179,8 +203,23 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
      */
     public fun interval(t: Double): Int = intervalOf(t)
 
-    /** Три активных значения omega_{k-2},omega_{k-1},omega_k в точке t (одно (T_k M_k)^{-1} psi_k(t)). */
+    /** Проверка индекса базисного сплайна j из [-2, n-1]. */
+    private fun requireIndex(j: Int) {
+        require(j in -2..n - 1) { "Индекс сплайна j должен лежать в [-2, ${n - 1}], получено $j" }
+    }
+
+    /** Проверка длины вектора коэффициентов: по одному на базисный сплайн omega_{-2}, ..., omega_{n-1}. */
+    private fun requireCoefficients(c: DoubleArray) {
+        require(c.size == n + 2) { "Вектор коэффициентов должен иметь длину n + 2 = ${n + 2}, получено ${c.size}" }
+    }
+
+    /**
+     * Три активных значения omega_{k-2},omega_{k-1},omega_k в точке t (одно (T_k M_k)^{-1} psi_k(t)).
+     *
+     * @throws IllegalArgumentException если k вне [0, n-1].
+     */
     public fun activeOmega(k: Int, t: Double): DoubleArray {
+        require(k in 0..n - 1) { "Индекс интервала k должен лежать в [0, ${n - 1}], получено $k" }
         val inv = invM[k]
         val p = frames[k].psi(t)
         return doubleArrayOf(
@@ -190,8 +229,13 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
         )
     }
 
-    /** Значение omega_j(t), j из [-2, n-1]. Носитель [x_j, x_{j+3}]; вне него 0. */
+    /**
+     * Значение omega_j(t), j из [-2, n-1]. Носитель [x_j, x_{j+3}]; вне него 0.
+     *
+     * @throws IllegalArgumentException если j вне [-2, n-1].
+     */
     public fun omega(j: Int, t: Double): Double {
+        requireIndex(j)
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
@@ -201,8 +245,13 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
         return inv[slot] * p[0] + inv[slot + 3] * p[1] + inv[slot + 6] * p[2]
     }
 
-    /** Производная omega_j'(t) (psi_k заменяется на psi_k'). Нужна для xi-функционалов. */
+    /**
+     * Производная omega_j'(t) (psi_k заменяется на psi_k'). Нужна для xi-функционалов.
+     *
+     * @throws IllegalArgumentException если j вне [-2, n-1].
+     */
     public fun omegaDeriv(j: Int, t: Double): Double {
+        requireIndex(j)
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
@@ -216,8 +265,11 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
      * Вторая производная omega_j''(t) (psi_k заменяется на psi_k''). Нужна для xi^<0>
      * (де Бура--Фикса r=0). Кусочно-постоянна по слоям; в узлах сетки omega_j'' терпит
      * разрыв (omega_j in C^1 \ C^2), поэтому значение в узле берётся по правому куску.
+     *
+     * @throws IllegalArgumentException если j вне [-2, n-1].
      */
     public fun omegaDeriv2(j: Int, t: Double): Double {
+        requireIndex(j)
         if (t < grid.x(j) || t > grid.x(j + 3)) return 0.0
         val k = intervalOf(t)
         val slot = j - (k - 2)
@@ -230,10 +282,11 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
     /**
      * Значение сплайна u_h(t) = sum_j c_j omega_j(t), c размера n+2.
      *
-     * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]):
+     * @throws IllegalArgumentException если c.size != n + 2 или t строго вне отрезка сетки (см. [intervalOf]):
      *   вне отрезка сплайн не определён, а прежнее поведение молча экстраполировало.
      */
     public fun evalSpline(c: DoubleArray, t: Double): Double {
+        requireCoefficients(c)
         val k = intervalOf(t)
         val w = activeOmega(k, t)
         return c[k] * w[0] + c[k + 1] * w[1] + c[k + 2] * w[2] // индексы k-2,k-1,k -> +2
@@ -242,9 +295,10 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
     /**
      * Значение производной сплайна u_h'(t).
      *
-     * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]).
+     * @throws IllegalArgumentException если c.size != n + 2 или t строго вне отрезка сетки (см. [intervalOf]).
      */
     public fun evalSplineDeriv(c: DoubleArray, t: Double): Double {
+        requireCoefficients(c)
         val k = intervalOf(t)
         val inv = invM[k]
         val p = frames[k].psiD(t)
@@ -257,9 +311,10 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
     /**
      * Значение второй производной сплайна u_h''(t) (для xi^{<0>}-идемпотентности).
      *
-     * @throws IllegalArgumentException если t строго вне отрезка сетки (см. [intervalOf]).
+     * @throws IllegalArgumentException если c.size != n + 2 или t строго вне отрезка сетки (см. [intervalOf]).
      */
     public fun evalSplineDeriv2(c: DoubleArray, t: Double): Double {
+        requireCoefficients(c)
         val k = intervalOf(t)
         val inv = invM[k]
         val p = frames[k].psiDD(t)
@@ -283,3 +338,6 @@ private fun cross(u: DoubleArray, v: DoubleArray): DoubleArray = doubleArrayOf(
 
 /** Скалярное произведение в R^3. */
 private fun dot(u: DoubleArray, v: DoubleArray): Double = u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+
+/** Все компоненты вектора финитны (нет переполнения и NaN). */
+private fun allFinite(u: DoubleArray): Boolean = u.all { it.isFinite() }

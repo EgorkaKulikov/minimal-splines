@@ -1,7 +1,6 @@
 package splines
 
 import numerics.backend.Backends
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Tag
@@ -17,7 +16,6 @@ import kotlin.math.max
 import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -117,53 +115,58 @@ class BoundaryCasesTest {
         assertFailsWith<IllegalArgumentException> { Grid(1, doubleArrayOf(0.0, Double.NaN)) }
     }
 
-    @Disabled("дефект: evalSpline не проверяет c.size == n + 2 — слишком длинный c принимается молча, слишком короткий падает IndexOutOfBounds только в интервалах, где индекс k+2 выходит за массив")
     @Test
     fun evalSpline_wrongCoefficientLengthRejected() {
-        val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
-        assertFailsWith<IllegalArgumentException> { basis.evalSpline(DoubleArray(basis.grid.n + 3) { 1.0 }, 0.5) }
-        assertFailsWith<IllegalArgumentException> { basis.evalSpline(DoubleArray(basis.grid.n + 1) { 1.0 }, 0.5) }
-        assertFailsWith<IllegalArgumentException> { basis.evalSpline(DoubleArray(0), 0.5) }
-    }
-
-    @Test
-    fun evalSpline_wrongCoefficientLengthCurrentBehaviour() {
-        // Фиксация текущего поведения (см. отключённый тест выше): лишние коэффициенты игнорируются,
-        // недостающие проявляются исключением индекса только в последнем интервале.
+        // Раньше слишком длинный c принимался молча, а слишком короткий падал IndexOutOfBounds
+        // только в интервалах, где индекс k+2 выходит за массив.
         val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
         val n = basis.grid.n
         val long = DoubleArray(n + 3) { 1.0 }
-        assertEquals(1.0, basis.evalSpline(long, 0.5), 1e-15)
         val short = DoubleArray(n + 1) { 1.0 }
-        assertEquals(1.0, basis.evalSpline(short, 0.05), 1e-15)
-        assertFailsWith<IndexOutOfBoundsException> { basis.evalSpline(short, 1.0) }
+        val evaluators = listOf<Pair<String, (DoubleArray, Double) -> Double>>(
+            "evalSpline" to basis::evalSpline,
+            "evalSplineDeriv" to basis::evalSplineDeriv,
+            "evalSplineDeriv2" to basis::evalSplineDeriv2,
+        )
+        for ((name, eval) in evaluators) {
+            for ((c, t) in listOf(long to 0.5, short to 0.5, short to 0.05, short to 1.0, DoubleArray(0) to 0.5)) {
+                val e = assertFailsWith<IllegalArgumentException>("$name(c.size=${c.size}, t=$t)") { eval(c, t) }
+                assertTrue(e.message!!.contains("n + 2 = ${n + 2}") && e.message!!.contains("получено ${c.size}"), e.message)
+            }
+            // Корректная длина принимается: разбиение единицы даёт 1 для значения и 0 для производных.
+            val expected = if (name == "evalSpline") 1.0 else 0.0
+            assertEquals(expected, eval(DoubleArray(n + 2) { 1.0 }, 0.5), 1e-12, name)
+        }
     }
 
     // ---------------------------------------------------------------- вне отрезка, NaN
 
-    @Disabled("дефект: omega(j, t) не проверяет j in -2..n-1 — при j >= n и t < b молча возвращает 0.0, при j < -2 или t = b падает ArrayIndexOutOfBoundsException из Grid.x")
     @Test
     fun omega_indexOutsideRangeRejected() {
+        // Раньше при j >= n и t < b возвращался 0.0, а при j < -2 или t = b падала
+        // ArrayIndexOutOfBoundsException из Grid.x.
         val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
         val n = basis.grid.n
-        assertFailsWith<IllegalArgumentException> { basis.omega(-3, 0.5) }
-        assertFailsWith<IllegalArgumentException> { basis.omega(n, 0.5) }
-        assertFailsWith<IllegalArgumentException> { basis.omega(n + 5, 0.5) }
-    }
-
-    @Test
-    fun omega_indexOutsideRangeCurrentBehaviour() {
-        // Фиксация текущего поведения (см. отключённый тест выше).
-        val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
-        val n = basis.grid.n
-        assertEquals(0.0, basis.omega(n, 0.5))
-        assertEquals(0.0, basis.omega(n + 2, 0.5))
-        val below = assertFails { basis.omega(-3, 0.5) }
-        val atEnd = assertFails { basis.omega(n, 1.0) }
-        val farAbove = assertFails { basis.omega(n + 5, 0.5) }
-        for (e in listOf(below, atEnd, farAbove)) assertTrue(e is IndexOutOfBoundsException, "${e::class.simpleName}: ${e.message}")
-        report().appendText("omega(j=n, t<b)\t0.0 без исключения\n")
-        report().appendText("omega(j=-3), omega(j=n, t=b), omega(j=n+5)\t${below::class.simpleName}\n")
+        val evaluators = listOf<Pair<String, (Int, Double) -> Double>>(
+            "omega" to basis::omega,
+            "omegaDeriv" to basis::omegaDeriv,
+            "omegaDeriv2" to basis::omegaDeriv2,
+        )
+        for ((name, eval) in evaluators) {
+            for ((j, t) in listOf(-3 to 0.5, n to 0.5, n to 1.0, n + 2 to 0.5, n + 5 to 0.5)) {
+                val e = assertFailsWith<IllegalArgumentException>("$name(j=$j, t=$t)") { eval(j, t) }
+                assertTrue(e.message!!.contains("[-2, ${n - 1}]") && e.message!!.contains("получено $j"), e.message)
+            }
+            // Границы диапазона допустимы, вне носителя значение 0.
+            assertEquals(0.0, eval(-2, 1.0))
+            assertEquals(0.0, eval(n - 1, 0.0))
+        }
+        for (k in listOf(-1, n, n + 3)) {
+            val e = assertFailsWith<IllegalArgumentException>("activeOmega(k=$k)") { basis.activeOmega(k, 0.5) }
+            assertTrue(e.message!!.contains("[0, ${n - 1}]") && e.message!!.contains("получено $k"), e.message)
+        }
+        assertEquals(3, basis.activeOmega(0, 0.0).size)
+        assertEquals(3, basis.activeOmega(n - 1, 1.0).size)
     }
 
     @Test
@@ -235,7 +238,9 @@ class BoundaryCasesTest {
         listOf(1e6, 1e-6).map { b ->
             dynamicTest("${sys.name} на [0, $b], n=100") {
                 val grid = Grid.uniform(100, 0.0, b)
-                val strict = sys === GeneratingSystem.B || b < 1.0
+                // H на [0, 1e6] при h = 1e4 не представима в double: локальный масштаб l = min(h, 1) = 1
+                // и sinh(2h) переполняется. Ожидается внятное исключение о нефинитности, а не NaN.
+                val overflow = sys === GeneratingSystem.H && b > 1.0
                 val outcome = try {
                     val basis = MinimalSplineBasis(sys, grid)
                     val pu = partitionOfUnityDefect(basis)
@@ -248,7 +253,13 @@ class BoundaryCasesTest {
                     "IllegalArgumentException: ${e.message?.lines()?.first()?.take(200)}"
                 }
                 report().appendText("${sys.name} [0,$b] n=100\t$outcome\n")
-                if (strict) {
+                if (overflow) {
+                    assertTrue(outcome.startsWith("IllegalArgumentException"), "${sys.name} [0,$b]: $outcome")
+                    assertTrue(
+                        outcome.contains("переполняется") && outcome.contains("нефинитны") && !outcome.contains("NaN"),
+                        "${sys.name} [0,$b]: $outcome",
+                    )
+                } else {
                     assertTrue(outcome.startsWith("построен"), "${sys.name} [0,$b]: $outcome")
                     val pu = outcome.substringAfter("pu=").substringBefore(",").toDouble()
                     assertTrue(pu <= 1e-12, "${sys.name} [0,$b]: дефект разбиения единицы $pu > 1e-12")
