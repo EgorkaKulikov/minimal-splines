@@ -32,7 +32,7 @@ class GridExtraTest {
 
     /**
      * Немонотонные узлы отбраковываются: без этого h = max_j(x_{j+1}-x_j) и бинарный
-     * поиск интервала тихо давали бы мусор вместо ошибки.
+     * поиск интервала давали бы недостоверные значения вместо ошибки.
      */
     @Test fun gridRejectsNonMonotoneNodes() {
         val e = assertFailsWith<IllegalArgumentException> {
@@ -49,7 +49,7 @@ class GridExtraTest {
         assertTrue(e.message!!.contains("i=1"), "сообщение должно указывать индекс: ${e.message}")
     }
 
-    /** n = 0: интервалов нет, раньше падало NoSuchElementException на max_j по пустому диапазону. */
+    /** n = 0: интервалов нет, шаг h = max_j (x_{j+1} - x_j) не определён; отклоняется с диагностикой. */
     @Test fun gridRejectsZeroIntervals() {
         val e = assertFailsWith<IllegalArgumentException> { Grid(0, doubleArrayOf(0.0)) }
         assertTrue(e.message!!.contains("n=0"), "сообщение должно содержать n: ${e.message}")
@@ -88,7 +88,7 @@ class GridExtraTest {
      *
      * Отбраковка идёт по ФАКТИЧЕСКИМ узлам (инвариант [Grid]), а НЕ по самому amp:
      * немонотонность Psi как функции не равносильна немонотонности конечного набора
-     * узлов. Закрепляем обе стороны: реально немонотонные входы падают, а легитимные
+     * узлов. Проверяются обе стороны: немонотонные входы отклоняются, а допустимые
      * (amp = 1/(2*pi) при любом n; amp = 0.16 при n = 8) — строятся.
      */
     @Test fun quasiUniformRejectsOnlyActuallyNonMonotoneNodes() {
@@ -98,7 +98,7 @@ class GridExtraTest {
             "сообщение должно указывать на немонотонные узлы: ${e.message}",
         )
         assertFailsWith<IllegalArgumentException> { Grid.quasiUniform(8, 0.0, 1.0, amp = -0.5) }
-        // ТОТ ЖЕ amp = 0.16 при n = 8 даёт строго возрастающие узлы и законен.
+        // То же amp = 0.16 при n = 8 даёт строго возрастающие узлы и допустимо.
         val coarse = Grid.quasiUniform(8, 0.0, 1.0, amp = 0.16)
         for (i in 0 until coarse.n) assertTrue(coarse.x(i + 1) > coarse.x(i), "amp=0.16,n=8: узел $i")
         // Граница ровно 1/(2*pi): Psi' обращается в ноль в ОДНОЙ точке, но узлы

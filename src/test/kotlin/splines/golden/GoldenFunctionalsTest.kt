@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 
 /**
  * functionals.json: коэффициенты проекторов, cChi, closedFormInternal — относительно
- * [GoldenCompare.BASIS_TOLERANCE] (семейства решают малые СЛАУ бэкендом numerical-core, эталон 0.1.0
+ * [GoldenCompare.BASIS_TOLERANCE] (семейства решают малые СЛАУ реализацией BLAS/LAPACK, эталон 0.1.0
  * получен по формулам Крамера, см. обоснование допуска); флаги и классы исключений — точно.
  */
 @Tag("fast")

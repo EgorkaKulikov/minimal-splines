@@ -5,6 +5,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 repositories {
@@ -126,6 +127,18 @@ kover {
 
 tasks.check {
     dependsOn("koverVerify")
+}
+
+// --- Документация -------------------------------------------------------------
+// HTML-документация публичного API: ./gradlew dokkaHtml (результат в build/dokka/html).
+// Публичные символы без KDoc выводятся предупреждениями.
+tasks.dokkaHtml {
+    moduleName.set("minimal-splines")
+    dokkaSourceSets.configureEach {
+        includeNonPublic.set(false)
+        reportUndocumented.set(true)
+        jdkVersion.set(21)
+    }
 }
 
 // --- Публикация ---------------------------------------------------------------

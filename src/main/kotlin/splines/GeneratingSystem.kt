@@ -7,7 +7,7 @@ import kotlin.math.sin
 import kotlin.math.sinh
 
 // ============================================================================
-// 3. ПОРОЖДАЮЩАЯ ВЕКТОР-ФУНКЦИЯ phi(t) = (1, rho(t), sigma(t))^T
+// Порождающая вектор-функция phi(t) = (1, rho(t), sigma(t))^T
 // ============================================================================
 
 /**
@@ -34,11 +34,20 @@ public class LocalFrame(
 )
 
 /**
- * Порождающая вектор-функция phi(t) = (1, rho(t), sigma(t))^T и её производные
- * до второго порядка. phi_0 == 1 обеспечивает разбиение единицы.
+ * Порождающая вектор-функция phi(t) = (1, rho(t), sigma(t))^T и её производные до второго
+ * порядка. Компонента phi_0 = 1 обеспечивает разбиение единицы базисом.
  *
- * Необязательный параметр [localFrameFactory] задаёт локальное представление системы на интервале
- * (см. [localFrame]); для встроенных систем [B], [H], [T] он определён.
+ * Необязательный параметр localFrameFactory задаёт локальное представление системы на интервале
+ * (см. [localFrame]); для встроенных систем [B], [H], [T] он определён. Система без него
+ * используется в глобальных координатах.
+ *
+ * @property name краткое имя системы (B, H, T или пользовательское).
+ * @property rho вторая компонента rho(t).
+ * @property sigma третья компонента sigma(t).
+ * @property rhoD производная rho'(t).
+ * @property sigmaD производная sigma'(t).
+ * @property rhoDD вторая производная rho''(t).
+ * @property sigmaDD вторая производная sigma''(t).
  */
 public class GeneratingSystem(
     public val name: String,
@@ -59,7 +68,7 @@ public class GeneratingSystem(
     /** phi''(t) = (0, rho''(t), sigma''(t)). */
     public fun phiDD(t: Double): DoubleArray = doubleArrayOf(0.0, rhoDD(t), sigmaDD(t))
 
-    /** Вронскиан det(phi, phi', phi'') — проверка невырожденности. */
+    /** Вронскиан det(phi(t), phi'(t), phi''(t)); отличен от нуля для невырожденной системы. */
     public fun wronskian(t: Double): Double {
         val a = phi(t); val b = phiD(t); val c = phiDD(t)
         return a[0] * (b[1] * c[2] - b[2] * c[1]) +
@@ -79,6 +88,7 @@ public class GeneratingSystem(
     public fun localFrame(c: Double, h: Double): LocalFrame =
         localFrameFactory?.invoke(c, h) ?: LocalFrame(::phi, ::phiD, ::phiDD, 1.0)
 
+    /** Встроенные порождающие системы. */
     public companion object {
         /** Полиномиальная phi^B(t) = (1, t, t^2)^T. */
         public val B: GeneratingSystem = GeneratingSystem(

@@ -117,8 +117,8 @@ class BoundaryCasesTest {
 
     @Test
     fun evalSpline_wrongCoefficientLengthRejected() {
-        // Раньше слишком длинный c принимался молча, а слишком короткий падал IndexOutOfBounds
-        // только в интервалах, где индекс k+2 выходит за массив.
+        // Длина вектора коэффициентов проверяется явно: и избыточная, и недостаточная длина
+        // отклоняются IllegalArgumentException с указанием ожидаемой длины n + 2.
         val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
         val n = basis.grid.n
         val long = DoubleArray(n + 3) { 1.0 }
@@ -143,8 +143,7 @@ class BoundaryCasesTest {
 
     @Test
     fun omega_indexOutsideRangeRejected() {
-        // Раньше при j >= n и t < b возвращался 0.0, а при j < -2 или t = b падала
-        // ArrayIndexOutOfBoundsException из Grid.x.
+        // Индекс сплайна вне [-2, n-1] отклоняется IllegalArgumentException при любом t.
         val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
         val n = basis.grid.n
         val evaluators = listOf<Pair<String, (Int, Double) -> Double>>(
