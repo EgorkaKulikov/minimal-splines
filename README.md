@@ -28,7 +28,7 @@ Hipparchus (`PolynomialSplineFunction`, `SplineInterpolator`) и Apache Commons 
 
 ## Подключение
 
-Требуется JDK 21 или новее. Зависимость `io.github.egorkakulikov:minimal-splines:1.0.0` публикуется в GitHub Packages;
+Требуется JDK 21 или новее. Зависимость `io.github.egorkakulikov:minimal-splines:1.0.1` публикуется в GitHub Packages;
 линейная алгебра выполняется библиотекой `io.github.egorkakulikov:numerical-core`, которая подключается транзитивно из
 собственного репозитория. Для чтения обоих репозиториев требуется токен с правом `read:packages` (`gpr.user` и `gpr.token`
 в `~/.gradle/gradle.properties` либо переменные окружения):
