@@ -11,12 +11,12 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Тесты параметра контрольной сетки в [errorEh]: контроль равномерной нормы на измельчённой сетке.
+ * Tests of the control-grid parameter of [errorEh]: measuring the uniform norm on a refined grid.
  */
 @Tag("fast")
 class MetricsControlGridTest {
 
-    /** Измельчение контрольной сетки может только увеличить максимум по точкам, но не уменьшить. */
+    /** Refining the control grid can only increase the maximum over the points, never decrease it. */
     @Test fun finerControlGridNeverDecreasesMaximum() {
         val g = Grid.uniform(16, 0.0, 1.0)
         val exact = { t: Double -> t * t }
@@ -27,9 +27,9 @@ class MetricsControlGridTest {
     }
 
     /**
-     * Для гладкой разности переход со 100n+1 на 1000n+1 точку сдвигает величину не более чем
-     * на 4.071e-4 в относительной мере, то есть контрольная сетка по умолчанию максимум ошибки
-     * не занижает.
+     * For a smooth difference, going from 100n+1 to 1000n+1 points shifts the value by at most
+     * 4.071e-4 in relative terms, i.e. the default control grid does not underestimate the error
+     * maximum.
      */
     @Test fun defaultControlGridDoesNotUnderestimateSmoothError() {
         val g = Grid.uniform(32, 0.0, 1.0)
@@ -38,32 +38,32 @@ class MetricsControlGridTest {
         val coarse = errorEh(exact, eval, g)
         val fine = errorEh(exact, eval, g, refinement = 1000)
         val shift = abs(fine - coarse) / fine
-        assertTrue(shift <= 4.071e-4, "относительный сдвиг $shift превысил эталонные 4.071e-4")
+        assertTrue(shift <= 4.071e-4, "relative shift $shift exceeded the reference 4.071e-4")
     }
 
     /**
-     * Зачем параметр вообще нужен: на разности с узким пиком между узлами контрольной
-     * сетки грубая сетка максимум ЗАНИЖАЕТ, и без измельчения это не обнаружить.
+     * Why the parameter is needed at all: for a difference with a narrow spike between the control
+     * grid points, a coarse grid UNDERESTIMATES the maximum, and without refinement this stays unnoticed.
      */
     @Test fun coarseControlGridMissesNarrowSpike() {
         val g = Grid.uniform(4, 0.0, 1.0)
-        val spikeCentre = 0.5 + 1.0 / (2.0 * 100 * 4) // ровно между точками сетки 100n+1
+        val spikeCentre = 0.5 + 1.0 / (2.0 * 100 * 4) // exactly between the points of the 100n+1 grid
         val exact = { _: Double -> 0.0 }
         val eval = { t: Double -> exp(-4e7 * (t - spikeCentre) * (t - spikeCentre)) }
         val coarse = errorEh(exact, eval, g)
         val fine = errorEh(exact, eval, g, refinement = 100_000)
-        assertTrue(coarse < 0.9, "грубая контрольная сетка обязана пропустить пик, получено $coarse")
-        assertTrue(fine > 0.99, "измельчённая контрольная сетка должна обнаружить пик, получено $fine")
+        assertTrue(coarse < 0.9, "the coarse control grid must miss the spike, got $coarse")
+        assertTrue(fine > 0.99, "the refined control grid must detect the spike, got $fine")
     }
 
-    /** refinement < 1 дал бы m = 0 и деление 0/0: это ошибка контракта, а не тихий NaN. */
+    /** refinement < 1 would give m = 0 and a 0/0 division: that is a contract violation, not a silent NaN. */
     @Test fun refinementBelowOneIsRejected() {
         val g = Grid.uniform(4)
         assertFailsWith<IllegalArgumentException> { errorEh({ 0.0 }, { 0.0 }, g, refinement = 0) }
         assertFailsWith<IllegalArgumentException> { errorEh({ 0.0 }, { 0.0 }, g, refinement = -1) }
     }
 
-    /** refinement = 1 законен: контрольная сетка совпадает с узлами равномерной основной. */
+    /** refinement = 1 is legal: the control grid coincides with the nodes of the uniform base grid. */
     @Test fun refinementOneEvaluatesAtGridNodes() {
         val g = Grid.uniform(4, 0.0, 1.0)
         val e = errorEh({ _ -> 0.0 }, { t -> t }, g, refinement = 1)

@@ -7,57 +7,57 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Дополнительные тесты сетки и эталонных формул: quasiUniform, проверка require,
- * вырожденность узлов и все ветви ReferenceSplines (B, B', H) внутри и вне носителя.
+ * Additional tests of the grid and of the reference formulas: quasiUniform, the require checks,
+ * node degeneracy and all branches of ReferenceSplines (B, B', H) inside and outside the support.
  */
 @Tag("fast")
 class GridExtraTest {
     private val tol = 1e-12
 
-    /** quasiUniform: монотонная сетка с концами a,b и фиксированной амплитудой. */
+    /** quasiUniform: a monotone grid with the ends a, b and a fixed amplitude. */
     @Test fun quasiUniformMonotoneEnds() {
         val g = Grid.quasiUniform(10, 0.0, 1.0, amp = 0.04)
         assertEquals(0.0, g.a, tol)
         assertEquals(1.0, g.b, tol)
-        // строгая монотонность внутренних узлов
+        // strict monotonicity of the interior nodes
         for (i in 0 until g.n) assertTrue(g.x(i + 1) > g.x(i), "node $i not increasing")
-        // граница тройная
+        // the boundary is a triple knot
         assertEquals(g.a, g.x(0), tol); assertEquals(g.b, g.x(g.n), tol)
     }
 
-    /** Конструктор Grid требует interior размера n+1. */
+    /** The Grid constructor requires interior of size n+1. */
     @Test fun gridRequiresCorrectSize() {
         assertFailsWith<IllegalArgumentException> { Grid(4, doubleArrayOf(0.0, 1.0)) }
     }
 
     /**
-     * Немонотонные узлы отбраковываются: без этого h = max_j(x_{j+1}-x_j) и бинарный
-     * поиск интервала давали бы недостоверные значения вместо ошибки.
+     * Non-monotone nodes are rejected: without this, h = max_j(x_{j+1}-x_j) and the binary search
+     * for the interval would produce unreliable values instead of an error.
      */
     @Test fun gridRejectsNonMonotoneNodes() {
         val e = assertFailsWith<IllegalArgumentException> {
-            Grid(3, doubleArrayOf(0.0, 0.7, 0.3, 1.0)) // узлы 1 и 2 переставлены
+            Grid(3, doubleArrayOf(0.0, 0.7, 0.3, 1.0)) // nodes 1 and 2 are swapped
         }
-        assertTrue(e.message!!.contains("i=1"), "сообщение должно указывать индекс: ${e.message}")
+        assertTrue(e.message!!.contains("i=1"), "the message must point at the index: ${e.message}")
     }
 
-    /** Дубликат внутреннего узла (нулевой шаг) — тоже нарушение СТРОГОГО возрастания. */
+    /** A duplicated interior node (zero step) also violates STRICT increase. */
     @Test fun gridRejectsDuplicatedNode() {
         val e = assertFailsWith<IllegalArgumentException> {
             Grid(3, doubleArrayOf(0.0, 0.5, 0.5, 1.0))
         }
-        assertTrue(e.message!!.contains("i=1"), "сообщение должно указывать индекс: ${e.message}")
+        assertTrue(e.message!!.contains("i=1"), "the message must point at the index: ${e.message}")
     }
 
-    /** n = 0: интервалов нет, шаг h = max_j (x_{j+1} - x_j) не определён; отклоняется с диагностикой. */
+    /** n = 0: there are no intervals, the step h = max_j (x_{j+1} - x_j) is undefined; rejected with a diagnostic. */
     @Test fun gridRejectsZeroIntervals() {
         val e = assertFailsWith<IllegalArgumentException> { Grid(0, doubleArrayOf(0.0)) }
-        assertTrue(e.message!!.contains("n=0"), "сообщение должно содержать n: ${e.message}")
+        assertTrue(e.message!!.contains("n=0"), "the message must contain n: ${e.message}")
     }
 
     /**
-     * Все четыре фабрики строят СТРОГО возрастающие узлы на всех используемых n и
-     * параметрах — т.е. новая проверка монотонности не срабатывает на штатных путях.
+     * All four factories build STRICTLY increasing nodes for every n and every parameter in use —
+     * that is, the new monotonicity check does not fire on the regular paths.
      */
     @Test fun allFactoriesProduceStrictlyIncreasingNodes() {
         val ns = listOf(2, 3, 4, 5, 8, 16, 32, 64, 128)
@@ -75,7 +75,7 @@ class GridExtraTest {
             }
             for ((name, g) in grids) {
                 for (i in 0 until g.n) {
-                    assertTrue(g.x(i + 1) > g.x(i), "$name: узлы не возрастают на i=$i")
+                    assertTrue(g.x(i + 1) > g.x(i), "$name: nodes do not increase at i=$i")
                 }
                 assertTrue(g.h > 0.0, "$name: h <= 0")
             }
@@ -83,43 +83,43 @@ class GridExtraTest {
     }
 
     /**
-     * quasiUniform — единственная фабрика, способная породить немонотонные узлы:
-     * Psi'(u) = 1 + 2*pi*amp*cos(2*pi*u) меняет знак при |amp| > 1/(2*pi) ≈ 0.15915.
+     * quasiUniform is the only factory able to produce non-monotone nodes:
+     * Psi'(u) = 1 + 2*pi*amp*cos(2*pi*u) changes sign for |amp| > 1/(2*pi) ≈ 0.15915.
      *
-     * Отбраковка идёт по ФАКТИЧЕСКИМ узлам (инвариант [Grid]), а НЕ по самому amp:
-     * немонотонность Psi как функции не равносильна немонотонности конечного набора
-     * узлов. Проверяются обе стороны: немонотонные входы отклоняются, а допустимые
-     * (amp = 1/(2*pi) при любом n; amp = 0.16 при n = 8) — строятся.
+     * The rejection is driven by the ACTUAL nodes (the [Grid] invariant) and NOT by amp itself:
+     * non-monotonicity of Psi as a function is not equivalent to non-monotonicity of a finite set
+     * of nodes. Both directions are checked: non-monotone inputs are rejected, while admissible ones
+     * (amp = 1/(2*pi) for any n; amp = 0.16 for n = 8) are built.
      */
     @Test fun quasiUniformRejectsOnlyActuallyNonMonotoneNodes() {
         val e = assertFailsWith<IllegalArgumentException> { Grid.quasiUniform(19, 0.0, 1.0, amp = 0.16) }
         assertTrue(
-            e.message!!.contains("возрастать"),
-            "сообщение должно указывать на немонотонные узлы: ${e.message}",
+            e.message!!.contains("strictly increasing"),
+            "the message must point at the non-monotone nodes: ${e.message}",
         )
         assertFailsWith<IllegalArgumentException> { Grid.quasiUniform(8, 0.0, 1.0, amp = -0.5) }
-        // То же amp = 0.16 при n = 8 даёт строго возрастающие узлы и допустимо.
+        // The same amp = 0.16 with n = 8 gives strictly increasing nodes and is admissible.
         val coarse = Grid.quasiUniform(8, 0.0, 1.0, amp = 0.16)
-        for (i in 0 until coarse.n) assertTrue(coarse.x(i + 1) > coarse.x(i), "amp=0.16,n=8: узел $i")
-        // Граница ровно 1/(2*pi): Psi' обращается в ноль в ОДНОЙ точке, но узлы
-        // строго возрастают при любом конечном n — отбраковывать его нечего.
+        for (i in 0 until coarse.n) assertTrue(coarse.x(i + 1) > coarse.x(i), "amp=0.16,n=8: node $i")
+        // Exactly at the boundary 1/(2*pi): Psi' vanishes at a SINGLE point, but the nodes are
+        // strictly increasing for any finite n — there is nothing to reject.
         for (n in intArrayOf(8, 64, 1024)) {
             val g = Grid.quasiUniform(n, 0.0, 1.0, amp = 1.0 / (2.0 * Math.PI))
-            for (i in 0 until g.n) assertTrue(g.x(i + 1) > g.x(i), "amp=1/(2pi),n=$n: узел $i")
+            for (i in 0 until g.n) assertTrue(g.x(i + 1) > g.x(i), "amp=1/(2pi),n=$n: node $i")
         }
-        // чуть ниже границы — всё ещё строится
+        // slightly below the boundary — still built
         val g = Grid.quasiUniform(64, 0.0, 1.0, amp = 0.158)
-        for (i in 0 until g.n) assertTrue(g.x(i + 1) > g.x(i), "amp=0.158: узел $i")
+        for (i in 0 until g.n) assertTrue(g.x(i + 1) > g.x(i), "amp=0.158: node $i")
     }
 
-    /** nonDegenerate=false при слиянии узлов на тройном крае (j=-2). */
+    /** nonDegenerate=false when nodes coincide at the triple knot on the left edge (j=-2). */
     @Test fun nonDegenerateFalseAtTripleKnot() {
         val g = Grid.uniform(8)
-        // x(-2)=x(-1)=x(0)=a -> вырождено
+        // x(-2)=x(-1)=x(0)=a -> degenerate
         assertTrue(!nonDegenerate(g, -2))
     }
 
-    /** omegaB равен нулю вне носителя [x_j, x_{j+3}] (обе ветви t<xj и t>xj3). */
+    /** omegaB is zero outside the support [x_j, x_{j+3}] (both branches t<xj and t>xj3). */
     @Test fun omegaBZeroOutsideSupport() {
         val g = Grid.uniform(8)
         val j = 2
@@ -129,7 +129,7 @@ class GridExtraTest {
         assertEquals(0.0, ReferenceSplines.omegaBDeriv(g, j, g.x(j + 3) + 0.01), tol)
     }
 
-    /** omegaB неотрицателен и попадает во все три куска (left, middle, right). */
+    /** omegaB is non-negative and covers all three pieces (left, middle, right). */
     @Test fun omegaBThreePieces() {
         val g = Grid.uniform(8)
         val j = 2
@@ -141,7 +141,7 @@ class GridExtraTest {
         }
     }
 
-    /** omegaBDeriv — численная производная согласуется с аналитической в каждом куске. */
+    /** omegaBDeriv — the numerical derivative agrees with the analytic one on every piece. */
     @Test fun omegaBDerivMatchesNumeric() {
         val g = Grid.uniform(8)
         val j = 2
@@ -152,7 +152,7 @@ class GridExtraTest {
         }
     }
 
-    /** omegaH: ноль вне носителя и положителен во всех трёх кусках. */
+    /** omegaH: zero outside the support and positive on all three pieces. */
     @Test fun omegaHPiecesAndSupport() {
         val g = Grid.uniform(8)
         val j = 2

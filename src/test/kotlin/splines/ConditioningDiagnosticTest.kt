@@ -20,10 +20,10 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Обусловленность матриц аппроксимационного соотношения в локальных координатах интервала
- * (T_k M_k) при измельчении сетки и при изменении положения и масштаба отрезка. Для сравнения
- * записывается и число обусловленности глобальной матрицы M_k. Результат — TSV
- * `build/reports/conditioning-diagnostic.tsv` (колонки `sys a b n condLocalMax condGlobal(k=0,n/2,n-1) pu`).
+ * Conditioning of the approximation relation matrices in the local coordinates of the interval
+ * (T_k M_k) under grid refinement and under changes of the position and scale of the interval. For
+ * comparison, the condition number of the global matrix M_k is recorded as well. The result is the
+ * TSV `build/reports/conditioning-diagnostic.tsv` (columns `sys a b n condLocalMax condGlobal(k=0,n/2,n-1) pu`).
  */
 @Tag("fast")
 class ConditioningDiagnosticTest {
@@ -64,7 +64,7 @@ class ConditioningDiagnosticTest {
         out.writeText(lines.joinToString("\n") + "\n")
     }
 
-    /** cond(T_k M_k) на [0,1] не превышает 10³ и не растёт при измельчении: cond(n=10⁴)/cond(n=10) ≤ 10. */
+    /** cond(T_k M_k) on [0,1] does not exceed 10³ and does not grow under refinement: cond(n=10⁴)/cond(n=10) ≤ 10. */
     @Test
     fun localConditioningIsIndependentOfRefinement() {
         val lines = arrayListOf("sys\ta\tb\tn\tcondLocalMax\tcondGlobal\tpu")
@@ -75,16 +75,16 @@ class ConditioningDiagnosticTest {
                 val (condLocal, pu) = record(lines, sys, Grid.uniform(n, 0.0, 1.0))
                 conds[n] = condLocal
                 if (condLocal > 1e3) failures += "${sys.name} n=$n: cond=$condLocal"
-                if (pu > 1e-9) failures += "${sys.name} n=$n: разбиение единицы pu=$pu"
+                if (pu > 1e-9) failures += "${sys.name} n=$n: partition of unity pu=$pu"
             }
             val ratio = conds.getValue(10000) / conds.getValue(10)
-            if (ratio > 10.0) failures += "${sys.name}: cond растёт с n, cond(10⁴)/cond(10)=$ratio"
+            if (ratio > 10.0) failures += "${sys.name}: cond grows with n, cond(10⁴)/cond(10)=$ratio"
         }
         write("conditioning-diagnostic.tsv", lines)
-        assertTrue(failures.isEmpty(), "обусловленность в локальных координатах: $failures")
+        assertTrue(failures.isEmpty(), "conditioning in local coordinates: $failures")
     }
 
-    /** cond(T_k M_k) не зависит от положения и масштаба отрезка: B на [100,101], [0,10⁶], [0,10⁻⁶]; H на [100,101]. */
+    /** cond(T_k M_k) does not depend on the position and scale of the interval: B on [100,101], [0,10⁶], [0,10⁻⁶]; H on [100,101]. */
     @Test
     fun localConditioningIsIndependentOfSegment() {
         val lines = arrayListOf("sys\ta\tb\tn\tcondLocalMax\tcondGlobal\tpu")
@@ -92,16 +92,16 @@ class ConditioningDiagnosticTest {
         for ((a, b) in listOf(100.0 to 101.0, 0.0 to 1e6, 0.0 to 1e-6)) {
             val (condLocal, pu) = record(lines, GeneratingSystem.B, Grid.uniform(100, a, b))
             if (condLocal > 1e3) failures += "B[$a,$b]: cond=$condLocal"
-            if (pu > 1e-9) failures += "B[$a,$b]: разбиение единицы pu=$pu"
+            if (pu > 1e-9) failures += "B[$a,$b]: partition of unity pu=$pu"
         }
         val (condH, puH) = record(lines, GeneratingSystem.H, Grid.uniform(100, 100.0, 101.0))
         if (condH > 1e3) failures += "H[100,101]: cond=$condH"
-        if (puH > 1e-8) failures += "H[100,101]: разбиение единицы pu=$puH"
+        if (puH > 1e-8) failures += "H[100,101]: partition of unity pu=$puH"
         write("conditioning-diagnostic-segments.tsv", lines)
-        assertTrue(failures.isEmpty(), "обусловленность в локальных координатах: $failures")
+        assertTrue(failures.isEmpty(), "conditioning in local coordinates: $failures")
     }
 
-    /** При n = 10⁴ разбиение единицы и воспроизведение элемента span phi выполняются с точностью 10⁻⁹. */
+    /** For n = 10⁴ the partition of unity and the reproduction of an element of span phi hold to 10⁻⁹. */
     @Test
     fun fineGridReproducesGeneratingSpan() {
         val cases = listOf(
@@ -112,28 +112,29 @@ class ConditioningDiagnosticTest {
             val grid = Grid.uniform(10000, 0.0, 1.0)
             val basis = MinimalSplineBasis(sys, grid)
             val pu = partitionOfUnityDefect(basis)
-            assertTrue(pu <= 1e-9, "${sys.name} n=10⁴: разбиение единицы pu=$pu")
+            assertTrue(pu <= 1e-9, "${sys.name} n=10⁴: partition of unity pu=$pu")
             val c = ProjFunctionals(basis).projectorCoeffs(f, derivs.first, derivs.second)
             var err = 0.0
             for (i in 0..50) {
                 val t = i / 50.0
                 err = max(err, abs(basis.evalSpline(c, t) - f(t)))
             }
-            assertTrue(err <= 1e-9, "${sys.name} n=10⁴: погрешность на span phi $err")
+            assertTrue(err <= 1e-9, "${sys.name} n=10⁴: error on span phi $err")
         }
     }
 
     /**
-     * Все пять семейств функционалов строятся для B на [0,1] при n = 10⁴ и для B, H, T на [100,101]
-     * при n = 100,
-     * и каждый квазипроектор воспроизводит f = 1 + 2 rho + 3 sigma с точностью 10⁻⁹ max|f|
-     * в метрике errorEh. Для xitilde точность на span phi проверяется только для B и вне краевого
-     * слоя из трёх шагов: на равномерной сетке центральная разность воспроизводит производную
-     * квадратичного многочлена точно, а для H и T даёт погрешность порядка h³ по построению семейства
-     * (порядок проверяется в ConvergenceOrderTest); у краёв производная заменяется односторонней
-     * разностью по кратным узлам, и погрешность на span phi там порядка h². Для H и T у xitilde
-     * проверяется лишь построение, погрешность записывается в отчёт.
-     * Результат — TSV `build/reports/functionals-diagnostic.tsv`.
+     * All five families of functionals are built for B on [0,1] with n = 10⁴ and for B, H, T on
+     * [100,101] with n = 100,
+     * and every quasi-projector reproduces f = 1 + 2 rho + 3 sigma to within 10⁻⁹ max|f|
+     * in the errorEh metric. For xitilde the accuracy on span phi is checked only for B and outside
+     * the boundary layer of three steps: on a uniform grid the central difference reproduces the
+     * derivative of a quadratic polynomial exactly, while for H and T it gives an error of order h³ by
+     * the construction of the family (the order is checked in ConvergenceOrderTest); near the edges the
+     * derivative is replaced by a one-sided difference over multiple nodes, and the error on span phi
+     * there is of order h². For H and T only the construction of xitilde is checked, and the error is
+     * written to the report.
+     * The result is the TSV `build/reports/functionals-diagnostic.tsv`.
      */
     @Test
     fun functionalsBuildOnFineGridsAndShiftedIntervals() {
@@ -159,7 +160,7 @@ class ConditioningDiagnosticTest {
                 val tag = "${sys.name}[${grid.a},${grid.b}] n=${grid.n} $name"
                 val family = try { make() } catch (e: Exception) {
                     lines += "${sys.name}\t${grid.a}\t${grid.b}\t${grid.n}\t$name\tfailed: ${e.message}\t-\t-"
-                    failures += "$tag: не строится (${e.message})"
+                    failures += "$tag: is not built (${e.message})"
                     continue
                 }
                 val c = family.projectorCoeffs(f, fD, fDD)
@@ -174,10 +175,10 @@ class ConditioningDiagnosticTest {
                 lines += "${sys.name}\t${grid.a}\t${grid.b}\t${grid.n}\t$name\tok\t${"%.3e".format(relErr)}\t${"%.3e".format(relErrInterior)}"
                 val checked = if (name == "xitilde") relErrInterior else relErr
                 val exactOnSpan = name != "xitilde" || sys === GeneratingSystem.B
-                if (exactOnSpan && checked > 1e-9) failures += "$tag: относительная погрешность на span phi $checked"
+                if (exactOnSpan && checked > 1e-9) failures += "$tag: relative error on span phi $checked"
             }
         }
         write("functionals-diagnostic.tsv", lines)
-        assertTrue(failures.isEmpty(), "семейства функционалов на мелкой сетке и смещённом отрезке: $failures")
+        assertTrue(failures.isEmpty(), "families of functionals on a fine grid and a shifted interval: $failures")
     }
 }

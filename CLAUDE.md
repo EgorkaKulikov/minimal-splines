@@ -1,2 +1,2 @@
-Правила работы с репозиторием изложены в `CONTRIBUTING.md`; они подлежат прочтению до
-внесения изменений в код.
+The rules for working with this repository are stated in `CONTRIBUTING.md`; read them before
+making any changes to the code.

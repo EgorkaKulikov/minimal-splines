@@ -10,8 +10,8 @@ import splines.golden.GoldenIo.readGolden
 import splines.golden.GoldenIo.section
 
 /**
- * metrics.json: errorEh — относительно [GoldenCompare.BASIS_TOLERANCE] (величина проходит через значения
- * сплайна и наследует погрешность эталона базиса).
+ * metrics.json: errorEh — compared against [GoldenCompare.BASIS_TOLERANCE] (the quantity goes through the
+ * spline values and inherits the error of the basis golden reference).
  */
 @Tag("fast")
 class GoldenMetricsTest {
@@ -20,13 +20,13 @@ class GoldenMetricsTest {
         val root = readGolden("metrics.json")
         val expEh = section(root, "errorEh")
         val got by lazy { GoldenCompute.errorEhCases() }
-        // errorEh вычисляется через значения сплайна и наследует погрешность эталона базиса
-        // (формулы Крамера в 0.1.0), поэтому сравнивается с тем же допуском, что и basis.
+        // errorEh is computed through the spline values and inherits the error of the basis golden reference
+        // (Cramer's rule in 0.1.0), so it is compared with the same tolerance as basis.
         val eh = expEh.keys.map { key ->
             dynamicTest("errorEh/$key") { compare(expEh[key], got[key], key, Mode.REL, GoldenCompare.BASIS_TOLERANCE) }
         }
         return eh + listOf(
-            dynamicTest("errorEh/набор случаев") { compare(expEh.keys.sorted(), got.keys.sorted(), "errorEh", Mode.BITS) },
+            dynamicTest("errorEh/case set") { compare(expEh.keys.sorted(), got.keys.sorted(), "errorEh", Mode.BITS) },
         )
     }
 }

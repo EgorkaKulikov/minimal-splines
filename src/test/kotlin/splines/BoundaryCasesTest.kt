@@ -20,17 +20,17 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Граничные случаи библиотеки: минимальные сетки (n = 1, 2), отвержение некорректного входа,
- * поведение вне отрезка сетки и при NaN, пользовательские порождающие системы без локального
- * представления, экстремальные масштабы отрезка и потокобезопасность разделяемых объектов.
- * Зафиксированное поведение экстремальных случаев записывается в `build/reports/boundary-cases.tsv`.
+ * Boundary cases of the library: minimal grids (n = 1, 2), rejection of invalid input, behaviour
+ * outside the grid interval and at NaN, user-defined generating systems without a local
+ * representation, extreme interval scales and thread safety of shared objects.
+ * The recorded behaviour of the extreme cases is written to `build/reports/boundary-cases.tsv`.
  */
 @Tag("fast")
 class BoundaryCasesTest {
     private val systems = listOf(GeneratingSystem.B, GeneratingSystem.H, GeneratingSystem.T)
 
     private companion object {
-        /** Файл создаётся заново один раз на запуск JVM, далее только дополняется. */
+        /** The file is created from scratch once per JVM run and is only appended to afterwards. */
         private val reportFile: File by lazy {
             File("build/reports/boundary-cases.tsv").also { file ->
                 file.parentFile.mkdirs()
@@ -41,7 +41,7 @@ class BoundaryCasesTest {
 
     private fun report(): File = reportFile
 
-    /** Максимум |sum_j omega_j(t) - 1| по равномерной сетке из m точек отрезка. */
+    /** Maximum of |sum_j omega_j(t) - 1| over a uniform grid of m points of the interval. */
     private fun partitionOfUnityDefect(basis: MinimalSplineBasis, m: Int = 400): Double {
         val g = basis.grid
         var worst = 0.0
@@ -59,28 +59,28 @@ class BoundaryCasesTest {
     @TestFactory
     fun smallestGrids(): List<DynamicTest> = listOf(1, 2).flatMap { n ->
         systems.map { sys ->
-            dynamicTest("n=$n, ${sys.name}: ${n + 2} функции, разбиение единицы, точность theta на span phi") {
+            dynamicTest("n=$n, ${sys.name}: ${n + 2} functions, partition of unity, accuracy of theta on span phi") {
                 val grid = Grid(n, DoubleArray(n + 1) { it.toDouble() / n })
                 val basis = MinimalSplineBasis(sys, grid)
-                // Ровно n + 2 базисных функции: j = -2..n-1, каждая ненулевая хотя бы в одной точке носителя.
+                // Exactly n + 2 basis functions: j = -2..n-1, each nonzero at least at one point of its support.
                 for (j in -2..n - 1) {
                     val mid = 0.5 * (grid.x(j) + grid.x(j + 3))
-                    assertTrue(basis.omega(j, mid) > 0.0, "omega_$j должна быть положительна в середине носителя")
+                    assertTrue(basis.omega(j, mid) > 0.0, "omega_$j must be positive at the middle of its support")
                 }
                 val pu = partitionOfUnityDefect(basis)
-                assertTrue(pu <= 1e-14, "n=$n, ${sys.name}: дефект разбиения единицы $pu > 1e-14")
+                assertTrue(pu <= 1e-14, "n=$n, ${sys.name}: partition of unity defect $pu > 1e-14")
 
                 val f: (Double) -> Double = { t -> 1.0 + 2.0 * sys.rho(t) + 3.0 * sys.sigma(t) }
                 val theta = ProjFunctionals(basis)
                 val c = theta.projectorCoeffs(f)
                 assertEquals(n + 2, c.size)
                 val err = errorEh(f, { t -> basis.evalSpline(c, t) }, grid)
-                assertTrue(err <= 1e-12, "n=$n, ${sys.name}: theta не воспроизводит span phi, E_h = $err")
+                assertTrue(err <= 1e-12, "n=$n, ${sys.name}: theta does not reproduce span phi, E_h = $err")
             }
         }
     }
 
-    // ---------------------------------------------------------------- отвержение входа
+    // ---------------------------------------------------------------- input rejection
 
     @Test
     fun grid_nonIncreasingInteriorRejected() {
@@ -109,7 +109,7 @@ class BoundaryCasesTest {
 
     @Test
     fun grid_nanInteriorRejected() {
-        // NaN нарушает строгое возрастание (любое сравнение с NaN ложно), поэтому отвергается той же проверкой.
+        // NaN violates strict increase (any comparison with NaN is false), so it is rejected by the same check.
         assertFailsWith<IllegalArgumentException> { Grid(2, doubleArrayOf(0.0, Double.NaN, 1.0)) }
         assertFailsWith<IllegalArgumentException> { Grid(1, doubleArrayOf(Double.NaN, 1.0)) }
         assertFailsWith<IllegalArgumentException> { Grid(1, doubleArrayOf(0.0, Double.NaN)) }
@@ -117,8 +117,8 @@ class BoundaryCasesTest {
 
     @Test
     fun evalSpline_wrongCoefficientLengthRejected() {
-        // Длина вектора коэффициентов проверяется явно: и избыточная, и недостаточная длина
-        // отклоняются IllegalArgumentException с указанием ожидаемой длины n + 2.
+        // The length of the coefficient vector is checked explicitly: both an excessive and an
+        // insufficient length are rejected with IllegalArgumentException stating the expected length n + 2.
         val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
         val n = basis.grid.n
         val long = DoubleArray(n + 3) { 1.0 }
@@ -131,19 +131,19 @@ class BoundaryCasesTest {
         for ((name, eval) in evaluators) {
             for ((c, t) in listOf(long to 0.5, short to 0.5, short to 0.05, short to 1.0, DoubleArray(0) to 0.5)) {
                 val e = assertFailsWith<IllegalArgumentException>("$name(c.size=${c.size}, t=$t)") { eval(c, t) }
-                assertTrue(e.message!!.contains("n + 2 = ${n + 2}") && e.message!!.contains("получено ${c.size}"), e.message)
+                assertTrue(e.message!!.contains("n + 2 = ${n + 2}") && e.message!!.contains("got ${c.size}"), e.message)
             }
-            // Корректная длина принимается: разбиение единицы даёт 1 для значения и 0 для производных.
+            // A correct length is accepted: the partition of unity gives 1 for the value and 0 for the derivatives.
             val expected = if (name == "evalSpline") 1.0 else 0.0
             assertEquals(expected, eval(DoubleArray(n + 2) { 1.0 }, 0.5), 1e-12, name)
         }
     }
 
-    // ---------------------------------------------------------------- вне отрезка, NaN
+    // ---------------------------------------------------------------- outside the interval, NaN
 
     @Test
     fun omega_indexOutsideRangeRejected() {
-        // Индекс сплайна вне [-2, n-1] отклоняется IllegalArgumentException при любом t.
+        // A spline index outside [-2, n-1] is rejected with IllegalArgumentException for any t.
         val basis = MinimalSplineBasis(GeneratingSystem.B, Grid.uniform(8, 0.0, 1.0))
         val n = basis.grid.n
         val evaluators = listOf<Pair<String, (Int, Double) -> Double>>(
@@ -154,15 +154,15 @@ class BoundaryCasesTest {
         for ((name, eval) in evaluators) {
             for ((j, t) in listOf(-3 to 0.5, n to 0.5, n to 1.0, n + 2 to 0.5, n + 5 to 0.5)) {
                 val e = assertFailsWith<IllegalArgumentException>("$name(j=$j, t=$t)") { eval(j, t) }
-                assertTrue(e.message!!.contains("[-2, ${n - 1}]") && e.message!!.contains("получено $j"), e.message)
+                assertTrue(e.message!!.contains("[-2, ${n - 1}]") && e.message!!.contains("got $j"), e.message)
             }
-            // Границы диапазона допустимы, вне носителя значение 0.
+            // The ends of the range are admissible; outside the support the value is 0.
             assertEquals(0.0, eval(-2, 1.0))
             assertEquals(0.0, eval(n - 1, 0.0))
         }
         for (k in listOf(-1, n, n + 3)) {
             val e = assertFailsWith<IllegalArgumentException>("activeOmega(k=$k)") { basis.activeOmega(k, 0.5) }
-            assertTrue(e.message!!.contains("[0, ${n - 1}]") && e.message!!.contains("получено $k"), e.message)
+            assertTrue(e.message!!.contains("[0, ${n - 1}]") && e.message!!.contains("got $k"), e.message)
         }
         assertEquals(3, basis.activeOmega(0, 0.0).size)
         assertEquals(3, basis.activeOmega(n - 1, 1.0).size)
@@ -178,10 +178,10 @@ class BoundaryCasesTest {
             assertFailsWith<IllegalArgumentException>("t=$t") { basis.evalSplineDeriv(c, t) }
             assertFailsWith<IllegalArgumentException>("t=$t") { basis.evalSplineDeriv2(c, t) }
         }
-        // Концы отрезка принадлежат ему.
+        // The ends of the interval belong to it.
         assertEquals(0, basis.interval(0.0))
         assertEquals(basis.grid.n - 1, basis.interval(1.0))
-        // omega вне носителя, в том числе вне отрезка, равна нулю без исключения.
+        // omega outside its support, including outside the interval, is zero without an exception.
         assertEquals(0.0, basis.omega(0, -1.0))
         assertEquals(0.0, basis.omega(basis.grid.n - 1, 2.0))
     }
@@ -195,14 +195,14 @@ class BoundaryCasesTest {
             val w = basis.omega(0, Double.NaN)
             "evalSpline=$v, omega=$w"
         } catch (e: RuntimeException) {
-            "исключение ${e::class.simpleName}"
+            "exception ${e::class.simpleName}"
         }
         report().appendText("evalSpline(t=NaN)\t$outcome\n")
-        // Допустимы оба исхода; сейчас NaN проходит сквозь проверку отрезка и распространяется в результат.
-        assertTrue(outcome.startsWith("evalSpline=NaN") || outcome.startsWith("исключение"), outcome)
+        // Both outcomes are admissible; currently NaN passes through the interval check and propagates into the result.
+        assertTrue(outcome.startsWith("evalSpline=NaN") || outcome.startsWith("exception"), outcome)
     }
 
-    // ---------------------------------------------------------------- пользовательская система
+    // ---------------------------------------------------------------- user-defined system
 
     @TestFactory
     fun customSystemWithoutLocalFrame(): List<DynamicTest> {
@@ -217,28 +217,28 @@ class BoundaryCasesTest {
             rhoDD = { 0.0 }, sigmaDD = { t -> 6.0 * t },
         )
         return listOf(expSys to Grid.uniform(50, 0.0, 1.0), cubicSys to Grid.uniform(50, 1.0, 2.0)).map { (sys, grid) ->
-            dynamicTest("${sys.name} на [${grid.a}, ${grid.b}], n=${grid.n}") {
+            dynamicTest("${sys.name} on [${grid.a}, ${grid.b}], n=${grid.n}") {
                 val basis = MinimalSplineBasis(sys, grid)
                 val pu = partitionOfUnityDefect(basis)
                 report().appendText("custom ${sys.name} [${grid.a},${grid.b}] n=${grid.n}\tpu=$pu\n")
-                assertTrue(pu <= 1e-10, "${sys.name}: дефект разбиения единицы $pu > 1e-10")
+                assertTrue(pu <= 1e-10, "${sys.name}: partition of unity defect $pu > 1e-10")
                 val f: (Double) -> Double = { t -> 1.0 + 2.0 * sys.rho(t) + 3.0 * sys.sigma(t) }
                 val c = ProjFunctionals(basis).projectorCoeffs(f)
                 val err = errorEh(f, { t -> basis.evalSpline(c, t) }, grid)
-                assertTrue(err <= 1e-9, "${sys.name}: theta не воспроизводит span phi, E_h = $err")
+                assertTrue(err <= 1e-9, "${sys.name}: theta does not reproduce span phi, E_h = $err")
             }
         }
     }
 
-    // ---------------------------------------------------------------- экстремальные отрезки
+    // ---------------------------------------------------------------- extreme intervals
 
     @TestFactory
     fun extremeSegments(): List<DynamicTest> = systems.flatMap { sys ->
         listOf(1e6, 1e-6).map { b ->
-            dynamicTest("${sys.name} на [0, $b], n=100") {
+            dynamicTest("${sys.name} on [0, $b], n=100") {
                 val grid = Grid.uniform(100, 0.0, b)
-                // H на [0, 1e6] при h = 1e4 не представима в double: локальный масштаб l = min(h, 1) = 1
-                // и sinh(2h) переполняется. Ожидается внятное исключение о нефинитности, а не NaN.
+                // H on [0, 1e6] with h = 1e4 is not representable in double: the local scale is l = min(h, 1) = 1
+                // and sinh(2h) overflows. A clear exception about non-finite values is expected, not a NaN.
                 val overflow = sys === GeneratingSystem.H && b > 1.0
                 val outcome = try {
                     val basis = MinimalSplineBasis(sys, grid)
@@ -247,7 +247,7 @@ class BoundaryCasesTest {
                         val t = b * i / 400
                         (-2..grid.n - 1).minOf { j -> basis.omega(j, t) }
                     }
-                    "построен, pu=$pu, min omega=$minOmega"
+                    "built, pu=$pu, min omega=$minOmega"
                 } catch (e: IllegalArgumentException) {
                     "IllegalArgumentException: ${e.message?.lines()?.first()?.take(200)}"
                 }
@@ -255,19 +255,19 @@ class BoundaryCasesTest {
                 if (overflow) {
                     assertTrue(outcome.startsWith("IllegalArgumentException"), "${sys.name} [0,$b]: $outcome")
                     assertTrue(
-                        outcome.contains("переполняется") && outcome.contains("нефинитны") && !outcome.contains("NaN"),
+                        outcome.contains("overflows on interval") && outcome.contains("are non-finite") && !outcome.contains("NaN"),
                         "${sys.name} [0,$b]: $outcome",
                     )
                 } else {
-                    assertTrue(outcome.startsWith("построен"), "${sys.name} [0,$b]: $outcome")
+                    assertTrue(outcome.startsWith("built"), "${sys.name} [0,$b]: $outcome")
                     val pu = outcome.substringAfter("pu=").substringBefore(",").toDouble()
-                    assertTrue(pu <= 1e-12, "${sys.name} [0,$b]: дефект разбиения единицы $pu > 1e-12")
+                    assertTrue(pu <= 1e-12, "${sys.name} [0,$b]: partition of unity defect $pu > 1e-12")
                 }
             }
         }
     }
 
-    // ---------------------------------------------------------------- потокобезопасность
+    // ---------------------------------------------------------------- thread safety
 
     @Test
     fun sharedBasisAndFunctionals_threadSafe() {
@@ -292,7 +292,7 @@ class BoundaryCasesTest {
             for (fut in evalFutures) {
                 val values = fut.get()
                 for (i in points.indices) {
-                    assertEquals(refValues[i].toRawBits(), values[i].toRawBits(), "evalSpline в точке ${points[i]} отличается побитово")
+                    assertEquals(refValues[i].toRawBits(), values[i].toRawBits(), "evalSpline at the point ${points[i]} differs bitwise")
                 }
             }
             for (fut in coeffFutures) {
@@ -301,9 +301,9 @@ class BoundaryCasesTest {
                     for (i in coeffs.indices) {
                         if (nativeBackend) {
                             val scale = max(1.0, abs(refCoeffs[i]))
-                            assertTrue(abs(coeffs[i] - refCoeffs[i]) <= 1e-14 * scale, "projectorCoeffs[$i] расходится: ${coeffs[i]} vs ${refCoeffs[i]}")
+                            assertTrue(abs(coeffs[i] - refCoeffs[i]) <= 1e-14 * scale, "projectorCoeffs[$i] diverges: ${coeffs[i]} vs ${refCoeffs[i]}")
                         } else {
-                            assertEquals(refCoeffs[i].toRawBits(), coeffs[i].toRawBits(), "projectorCoeffs[$i] отличается побитово")
+                            assertEquals(refCoeffs[i].toRawBits(), coeffs[i].toRawBits(), "projectorCoeffs[$i] differs bitwise")
                         }
                     }
                 }
@@ -311,6 +311,6 @@ class BoundaryCasesTest {
         } finally {
             pool.shutdown()
         }
-        report().appendText("threads 8x1000 evalSpline, 8x50 projectorCoeffs\tсовпадают (backend=${Backends.default().name})\n")
+        report().appendText("threads 8x1000 evalSpline, 8x50 projectorCoeffs\tmatch (backend=${Backends.default().name})\n")
     }
 }

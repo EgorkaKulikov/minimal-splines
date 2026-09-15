@@ -9,13 +9,13 @@ plugins {
 }
 
 repositories {
-    // numerical-core подключается как опубликованный артефакт. Порядок: mavenLocal первым — локальная сборка
-    // (`./gradlew publishToMavenLocal` в numerical-core) имеет приоритет; затем
-    // GitHub Packages — оттуда артефакт берёт CI. GitHub Packages требует аутентификацию
-    // даже на чтение: переменные окружения GITHUB_ACTOR/GITHUB_TOKEN (в GitHub Actions —
-    // встроенный токен) или gpr.user/gpr.token в ~/.gradle/gradle.properties (токен с
-    // read:packages). Фильтр content ограничивает этот репозиторий группой библиотеки,
-    // чтобы Gradle не ходил в GitHub Packages за остальными зависимостями.
+    // numerical-core is consumed as a published artifact. Order: mavenLocal first — a local build
+    // (`./gradlew publishToMavenLocal` in numerical-core) takes priority; then
+    // GitHub Packages — that is where CI takes the artifact from. GitHub Packages requires authentication
+    // even for reading: the environment variables GITHUB_ACTOR/GITHUB_TOKEN (in GitHub Actions —
+    // the built-in token) or gpr.user/gpr.token in ~/.gradle/gradle.properties (a token with
+    // read:packages). The content filter restricts this repository to the group of the library,
+    // so that Gradle does not go to GitHub Packages for the remaining dependencies.
     mavenLocal()
     maven {
         name = "GitHubPackagesNumericalCore"
@@ -27,17 +27,17 @@ repositories {
         content { includeGroup("io.github.egorkakulikov") }
     }
     mavenCentral()
-    // Дополнительный реестр по свойству `numericsRepositoryUrl` (см. README, раздел «Подключение»).
+    // An additional registry given by the `numericsRepositoryUrl` property (see README, section "Usage").
     providers.gradleProperty("numericsRepositoryUrl").orNull?.let { maven(url = uri(it)) }
 }
 
 val numericalCoreVersion: String by project
 
 dependencies {
-    // `api`, а не `implementation`: типы numerical-core (`GaussLegendre`, `NumericsContext`,
-    // `LinearAlgebra`) входят в сигнатуры публичного API этой библиотеки
-    // (`FunctionalFamily(basis, ctx)`), поэтому потребитель обязан
-    // видеть их на compile classpath транзитивно.
+    // `api` rather than `implementation`: numerical-core types (`GaussLegendre`, `NumericsContext`,
+    // `LinearAlgebra`) appear in the signatures of the public API of this library
+    // (`FunctionalFamily(basis, ctx)`), so a consumer must
+    // see them on the compile classpath transitively.
     api("io.github.egorkakulikov:numerical-core:$numericalCoreVersion")
 
     testImplementation(kotlin("test"))
@@ -55,23 +55,23 @@ java {
     withSourcesJar()
 }
 
-// Реализация BLAS/LAPACK в тестах (свойство numerics.backend): требуется семействам
-// функционалов theta/mu/lambda, решающим малые СЛАУ в конструкторе.
+// BLAS/LAPACK implementation used in the tests (the numerics.backend property): required by the
+// theta/mu/lambda functional families, which solve small linear systems in their constructor.
 val numericsBackend: String = System.getProperty("numerics.backend") ?: "auto"
 
 tasks.test {
     useJUnitPlatform { excludeTags("golden-generate") }
     systemProperty("numerics.backend", numericsBackend)
-    // Запас стека тестовой JVM: многопоточный dgetrf системного OpenBLAS на стандартном
-    // стеке потока завершал JVM сигналом (exit 139); см. numerical-core.
+    // Extra stack for the test JVM: the multithreaded dgetrf of the system OpenBLAS on the default
+    // thread stack terminated the JVM with a signal (exit 139); see numerical-core.
     jvmArgs("-Xss8m")
 }
 
-// Формирование эталонов поведения (src/test/resources/golden, см. README.md там же).
-// Выполняется только по явному запросу; в `test` и `fastTest` тег golden-generate исключён.
+// Generation of the golden references (src/test/resources/golden, see the README.md there).
+// Runs only on explicit request; in `test` and `fastTest` the golden-generate tag is excluded.
 tasks.register<Test>("regenerateGolden") {
     group = "verification"
-    description = "Перегенерировать golden-эталоны в src/test/resources/golden"
+    description = "Regenerate the golden references in src/test/resources/golden"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     useJUnitPlatform { includeTags("golden-generate") }
@@ -81,10 +81,10 @@ tasks.register<Test>("regenerateGolden") {
     outputs.upToDateWhen { false }
 }
 
-// Быстрый набор (тег `fast`); в этой библиотеке совпадает с `test` по составу.
+// Fast suite (the `fast` tag); in this library it has the same content as `test`.
 tasks.register<Test>("fastTest") {
     group = "verification"
-    description = "Быстрый набор тестов (тег fast)"
+    description = "Fast test suite (the fast tag)"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     useJUnitPlatform { includeTags("fast"); excludeTags("golden-generate") }
@@ -98,7 +98,7 @@ kover {
             disabledForTestTasks.add("regenerateGolden")
         }
         sources {
-            // Измерения производительности — не библиотечный код, в покрытии не участвуют.
+            // The performance measurements are not library code and do not take part in coverage.
             excludedSourceSets.add("benchmark")
         }
     }
@@ -108,14 +108,14 @@ kover {
                 packages("splines.bench")
             }
         }
-        // Планка покрытия: проверяется задачей `koverVerify`, входящей в `check`.
-        // Замер при обеих реализациях BLAS/LAPACK: строки 95.8 %, ветви 90.9 %;
-        // порог — фактическое значение минус 1 %, чтобы результат не зависел от машины.
+        // Coverage bar: enforced by the `koverVerify` task, which is part of `check`.
+        // Measured with both BLAS/LAPACK implementations: lines 95.8 %, branches 90.9 %;
+        // the threshold is the actual value minus 1 %, so that the result does not depend on the machine.
         verify {
-            rule("Покрытие строк") {
+            rule("Line coverage") {
                 minBound(94)
             }
-            rule("Покрытие ветвей") {
+            rule("Branch coverage") {
                 bound {
                     minValue = 89
                     coverageUnits = CoverageUnit.BRANCH
@@ -129,9 +129,9 @@ tasks.check {
     dependsOn("koverVerify")
 }
 
-// --- Документация -------------------------------------------------------------
-// HTML-документация публичного API: ./gradlew dokkaHtml (результат в build/dokka/html).
-// Публичные символы без KDoc выводятся предупреждениями.
+// --- Documentation ------------------------------------------------------------
+// HTML documentation of the public API: ./gradlew dokkaHtml (the result is in build/dokka/html).
+// Public symbols without KDoc are reported as warnings.
 tasks.dokkaHtml {
     moduleName.set("minimal-splines")
     dokkaSourceSets.configureEach {
@@ -141,7 +141,7 @@ tasks.dokkaHtml {
     }
 }
 
-// --- Публикация ---------------------------------------------------------------
+// --- Publication --------------------------------------------------------------
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -149,9 +149,9 @@ publishing {
             pom {
                 name.set("minimal-splines")
                 description.set(
-                    "Библиотека квадратичных минимальных сплайнов и квазиинтерполяции для платформы JVM: " +
-                        "базис по произвольной порождающей системе (полиномиальной, гиперболической, " +
-                        "тригонометрической) и локальные аппроксимационные функционалы без решения глобальной СЛАУ.",
+                    "A library of quadratic minimal splines and quasi-interpolation for the JVM platform: " +
+                        "a basis built from an arbitrary generating system (polynomial, hyperbolic, " +
+                        "trigonometric) and local approximation functionals without solving a global linear system.",
                 )
                 url.set("https://github.com/EgorkaKulikov/minimal-splines")
                 inceptionYear.set("2026")
@@ -177,10 +177,10 @@ publishing {
         }
     }
     repositories {
-        // Публикация в GitHub Packages выполняется из CI по тегу версии задачей
-        // publishAllPublicationsToGitHubPackagesRepository; учётные данные — GITHUB_ACTOR/GITHUB_TOKEN
-        // либо gpr.user/gpr.token. Без них репозиторий объявлен, но недоступен; publishToMavenLocal
-        // от него не зависит.
+        // Publication to GitHub Packages is performed from CI on a version tag by the task
+        // publishAllPublicationsToGitHubPackagesRepository; the credentials are GITHUB_ACTOR/GITHUB_TOKEN
+        // or gpr.user/gpr.token. Without them the repository is declared but unreachable; publishToMavenLocal
+        // does not depend on it.
         maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/EgorkaKulikov/minimal-splines")
@@ -192,13 +192,13 @@ publishing {
     }
 }
 
-// Измерения производительности публичного API; в артефакт и в test не входят.
+// Performance measurements of the public API; they are part of neither the artifact nor test.
 val benchmark: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets["main"].output + configurations["runtimeClasspath"]
     runtimeClasspath += output + compileClasspath
 }
 tasks.register<JavaExec>("benchmark") {
-    description = "Измерения производительности построения базиса и функционалов; размеры сеток — через -Pbench.args=\"100 1000 10000\""
+    description = "Performance measurements of basis and functional construction; grid sizes are given via -Pbench.args=\"100 1000 10000\""
     group = "verification"
     classpath = benchmark.runtimeClasspath
     mainClass.set("splines.bench.BenchKt")

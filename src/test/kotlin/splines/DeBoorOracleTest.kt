@@ -10,16 +10,16 @@ import kotlin.math.max
 import kotlin.test.assertTrue
 
 /**
- * Независимый оракул для полиномиального случая: при φ = (1, t, t²) минимальные сплайны ω_j
- * равны классическим квадратичным B-сплайнам N_{j,2} на узловом векторе
+ * An independent oracle for the polynomial case: for φ = (1, t, t²) the minimal splines ω_j equal
+ * the classical quadratic B-splines N_{j,2} on the knot vector
  * x_{-2} = x_{-1} = x_0 = a < x_1 < … < x_{n-1} < x_n = x_{n+1} = x_{n+2} = b.
  *
- * N_{j,2} вычисляется рекурсией Кокса–де Бура (с соглашением 0/0 = 0), производная — по формуле
- * N'_{j,2} = 2 [N_{j,1}/(x_{j+2} − x_j) − N_{j+1,1}/(x_{j+3} − x_{j+1})]. Реализация оракула
- * не использует ни [MinimalSplineBasis], ни [ReferenceSplines].
+ * N_{j,2} is evaluated by the Cox–de Boor recursion (with the convention 0/0 = 0), the derivative
+ * by the formula N'_{j,2} = 2 [N_{j,1}/(x_{j+2} − x_j) − N_{j+1,1}/(x_{j+3} − x_{j+1})]. The oracle
+ * implementation uses neither [MinimalSplineBasis] nor [ReferenceSplines].
  *
- * Нормировка: оба семейства образуют разбиение единицы, поэтому константа отношения ω_j / N_{j,2}
- * равна 1; это проверяется отдельно по отношению внутри носителя.
+ * Normalization: both families form a partition of unity, hence the constant of the ratio
+ * ω_j / N_{j,2} equals 1; this is checked separately via the ratio inside the support.
  */
 @Tag("fast")
 class DeBoorOracleTest {
@@ -33,7 +33,7 @@ class DeBoorOracleTest {
         "graded" to { n -> Grid.graded(n, 0.0, 1.0) },
     )
 
-    /** N_{j,k}(t) по Коксу–де Буру; в точке t = b последний невырожденный интервал считается замкнутым. */
+    /** N_{j,k}(t) by Cox–de Boor; at t = b the last non-degenerate interval is treated as closed. */
     private fun bspline(grid: Grid, j: Int, k: Int, t: Double): Double {
         if (k == 0) {
             val xj = grid.x(j)
@@ -68,7 +68,7 @@ class DeBoorOracleTest {
         val maxRatioDev: Double,
     )
 
-    /** Все измерения; побочно записывается `build/reports/deboor-oracle.tsv`. */
+    /** All measurements; as a side effect `build/reports/deboor-oracle.tsv` is written. */
     private val results: Map<Pair<String, Int>, Record> by lazy { measureAll() }
 
     private fun measureAll(): Map<Pair<String, Int>, Record> {
@@ -129,16 +129,16 @@ class DeBoorOracleTest {
             tests += dynamicTest("$label: omega_j = N_{j,2}") {
                 assertTrue(
                     r.maxDiffOmega <= relTol * r.maxOmega,
-                    "$label: max|omega_j − N_{j,2}| = ${r.maxDiffOmega} (max|N| = ${r.maxOmega}) в ${r.whereOmega}",
+                    "$label: max|omega_j − N_{j,2}| = ${r.maxDiffOmega} (max|N| = ${r.maxOmega}) at ${r.whereOmega}",
                 )
             }
             tests += dynamicTest("$label: omega_j' = N'_{j,2}") {
                 assertTrue(
                     r.maxDiffDeriv <= relTol * r.maxDeriv,
-                    "$label: max|omega_j' − N'_{j,2}| = ${r.maxDiffDeriv} (max|N'| = ${r.maxDeriv}) в ${r.whereDeriv}",
+                    "$label: max|omega_j' − N'_{j,2}| = ${r.maxDiffDeriv} (max|N'| = ${r.maxDeriv}) at ${r.whereDeriv}",
                 )
             }
-            tests += dynamicTest("$label: константа нормировки omega_j / N_{j,2} равна 1") {
+            tests += dynamicTest("$label: normalization constant omega_j / N_{j,2} equals 1") {
                 assertTrue(r.maxRatioDev <= 1e-12, "$label: max|omega_j / N_{j,2} − 1| = ${r.maxRatioDev}")
             }
         }

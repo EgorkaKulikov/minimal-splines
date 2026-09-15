@@ -7,10 +7,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Тесты геометрической (неравномерной) сетки Grid.geometric (семейство sn-article):
- * концы a,b точны и узлы на концах тройные; строгая монотонность; h = max шаг;
- * отношение крайних шагов h_{n-1}/h_0 ~ R; локальная квазиравномерность
- * h_j/h_{j-1} в [mu^{-1}, mu] с mu=q (для этой сетки ratio постоянно и равно q).
+ * Tests for the geometric (non-uniform) grid Grid.geometric (the sn-article family):
+ * the endpoints a,b are exact and the nodes at the endpoints are triple; strict monotonicity;
+ * h = max step; the ratio of the extreme steps h_{n-1}/h_0 ~ R; local quasi-uniformity
+ * h_j/h_{j-1} in [mu^{-1}, mu] with mu=q (for this grid the ratio is constant and equal to q).
  */
 @Tag("fast")
 class GridGeometricTest {
@@ -37,7 +37,7 @@ class GridGeometricTest {
         var maxStep = 0.0
         for (i in 0 until n) maxStep = maxOf(maxStep, g.x(i + 1) - g.x(i))
         assertEquals(maxStep, g.h, tol)
-        // при q>1 максимальный шаг — последний.
+        // for q>1 the maximal step is the last one.
         assertEquals(g.x(n) - g.x(n - 1), g.h, tol)
     }
 

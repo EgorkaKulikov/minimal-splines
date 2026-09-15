@@ -16,33 +16,33 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Инварианты базиса и функционалов: разбиение единицы, биортогональность, точность на span φ.
+ * Invariants of the basis and the functionals: partition of unity, biorthogonality, exactness on
+ * span φ.
  *
- * Каждая проверка выполняется на четырёх сетках — равномерной, квазиравномерной,
- * градуированной и геометрической, — чтобы отловить ошибки, проявляющиеся только при
- * неравных шагах.
+ * Every check runs on four grids — uniform, quasi-uniform, graded and geometric — in order to
+ * catch errors that show up only for unequal steps.
  */
 @Tag("fast")
 class SplineCoreHealthCheckTest {
 
     private companion object {
-        /** Порог сравнения для тождеств, выполняющихся точно (с точностью до округления). */
+        /** Comparison threshold for identities that hold exactly (up to rounding). */
         const val EXACT_IDENTITY_TOLERANCE = 1e-10
 
-        /** Порог для величин, накапливающих ошибку решения малых линейных систем. */
+        /** Threshold for quantities that accumulate the error of solving small linear systems. */
         const val LINEAR_SOLVE_TOLERANCE = 1e-9
 
-        /** Порог для величин, накапливающих ошибку проектирования и вычисления сплайна. */
+        /** Threshold for quantities that accumulate the error of projection and spline evaluation. */
         const val PROJECTION_TOLERANCE = 1e-8
 
         /**
-         * Нижняя граница дефекта замкнутой формулы на неравномерной сетке: величина
-         * заведомо ниже фактического дефекта (порядка 0.2), поэтому проверка
-         * [closedFormIsUniformGridOnly] не зависит от точного значения.
+         * Lower bound for the defect of the closed formula on a non-uniform grid: the value is
+         * deliberately below the actual defect (about 0.2), so the check
+         * [closedFormIsUniformGridOnly] does not depend on the exact value.
          */
         const val CLOSED_FORM_GRADED_DEFECT_FLOOR = 1e-2
 
-        /** Число точек выборки внутри отрезка при поточечных сравнениях. */
+        /** Number of sample points inside the interval used in pointwise comparisons. */
         const val SAMPLE_COUNT = 200
     }
 
@@ -54,11 +54,11 @@ class SplineCoreHealthCheckTest {
     private val allSystems = listOf(GeneratingSystem.B, GeneratingSystem.H, GeneratingSystem.T)
 
     /**
-     * Тестовые сетки вместе с именами для сообщений об ошибке.
+     * The test grids together with names used in failure messages.
      *
-     * Сетки `graded` и `geometric` существенно неравномерны: у `graded` отношение
-     * соседних шагов фиксировано при любом n, и именно она используется при расчёте
-     * неравномерных таблиц (`verification.Sec4VerificationTool`).
+     * The `graded` and `geometric` grids are substantially non-uniform: for `graded` the ratio of
+     * neighbouring steps is fixed for any n, and it is exactly this grid that is used when computing
+     * the non-uniform tables (`verification.Sec4VerificationTool`).
      */
     private val namedGrids: List<Pair<String, Grid>> = listOf(
         "uniform" to uniformGrid,
@@ -67,21 +67,21 @@ class SplineCoreHealthCheckTest {
         "geometric" to geometricGrid,
     )
 
-    /** Возвращает наибольшее отклонение по всем тестовым сеткам. */
+    /** Returns the largest deviation over all test grids. */
     private fun worstOverGrids(action: (Grid) -> Double): Double =
         namedGrids.maxOf { (_, grid) -> action(grid) }
 
-    /** Точки выборки, равномерно покрывающие отрезок сетки. */
+    /** Sample points uniformly covering the grid interval. */
     private fun samplePoints(grid: Grid): List<Double> =
         sampleFractions.map { grid.a + (grid.b - grid.a) * it }
 
     /**
-     * Общий базис минимальных сплайнов на полиномиальной порождающей системе должен
-     * совпадать с классической явной формулой квадратичного B-сплайна — как по
-     * значению, так и по первой производной.
+     * The general minimal-spline basis on the polynomial generating system must coincide with the
+     * classical explicit formula for the quadratic B-spline — both by value and by the first
+     * derivative.
      *
-     * Это ключевая проверка: общая конструкция через обращение матрицы `M_k`
-     * сверяется с независимо выписанной замкнутой формулой.
+     * This is the key check: the general construction via inversion of the matrix `M_k` is verified
+     * against an independently written closed formula.
      */
     @Test
     fun polynomialSplineMatchesClosedFormB() {
@@ -101,14 +101,14 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < EXACT_IDENTITY_TOLERANCE,
-            "Базис B должен совпадать с явной формулой квадратичного B-сплайна, " +
-                "наибольшее отклонение = $deviation",
+            "The B basis must coincide with the explicit quadratic B-spline formula, " +
+                "largest deviation = $deviation",
         )
     }
 
     /**
-     * То же для гиперболической порождающей системы: общий базис должен совпадать
-     * с явной формулой гиперболического минимального сплайна.
+     * The same for the hyperbolic generating system: the general basis must coincide with the
+     * explicit formula for the hyperbolic minimal spline.
      */
     @Test
     fun hyperbolicSplineMatchesClosedFormH() {
@@ -124,15 +124,15 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < EXACT_IDENTITY_TOLERANCE,
-            "Базис H должен совпадать с явной формулой гиперболического сплайна, " +
-                "наибольшее отклонение = $deviation",
+            "The H basis must coincide with the explicit hyperbolic spline formula, " +
+                "largest deviation = $deviation",
         )
     }
 
     /**
-     * Разбиение единицы: сумма всех базисных сплайнов тождественно равна единице
-     * в любой точке отрезка. Свойство обеспечивается тем, что первая компонента
-     * порождающей вектор-функции равна константе.
+     * Partition of unity: the sum of all basis splines is identically equal to one at any point of
+     * the interval. The property follows from the first component of the generating vector function
+     * being a constant.
      */
     @Test
     fun basisFormsPartitionOfUnity() {
@@ -150,13 +150,13 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < EXACT_IDENTITY_TOLERANCE,
-            "Сумма базисных сплайнов должна равняться единице, наибольшее отклонение = $deviation",
+            "The sum of the basis splines must equal one, largest deviation = $deviation",
         )
     }
 
     /**
-     * Биортогональность проекционных функционалов: `theta_i(omega_j) = delta_ij`.
-     * Именно это свойство делает оператор `P_theta` проектором.
+     * Biorthogonality of the projection functionals: `theta_i(omega_j) = delta_ij`.
+     * It is precisely this property that makes the operator `P_theta` a projector.
      */
     @Test
     fun projectionFunctionalsAreBiorthogonal() {
@@ -177,17 +177,17 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < LINEAR_SOLVE_TOLERANCE,
-            "Функционалы theta должны быть биортогональны базису, наибольшее отклонение = $deviation",
+            "The theta functionals must be biorthogonal to the basis, largest deviation = $deviation",
         )
     }
 
     /**
-     * Биортогональность функционалов де Бура–Фикса для всех трёх вариантов
-     * `r = 0, 1, 2`, включая краевые индексы.
+     * Biorthogonality of the de Boor–Fix functionals for all three variants `r = 0, 1, 2`,
+     * including the boundary indices.
      *
-     * Для краевых функционалов (`j = -2` и `j = n-1`) реализация использует чистые
-     * значения в концах отрезка — это допущение, не выписанное в первоисточнике явно,
-     * и настоящая проверка служит его обоснованием.
+     * For the boundary functionals (`j = -2` and `j = n-1`) the implementation uses plain values at
+     * the endpoints of the interval — an assumption not written out explicitly in the primary
+     * source, and the present check serves as its justification.
      */
     @Test
     fun deBoorFixFunctionalsAreBiorthogonalForAllOrders() {
@@ -211,20 +211,19 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < LINEAR_SOLVE_TOLERANCE,
-            "Функционалы xi<0>, xi<1>, xi<2> должны быть биортогональны базису, " +
-                "наибольшее отклонение = $deviation",
+            "The functionals xi<0>, xi<1>, xi<2> must be biorthogonal to the basis, " +
+                "largest deviation = $deviation",
         )
     }
 
     /**
-     * Идемпотентность проекторов: если функция уже является сплайном, то её проекция
-     * должна возвращать в точности те же коэффициенты (`P^2 = P`).
+     * Idempotence of the projectors: if the function is already a spline, its projection must return
+     * exactly the same coefficients (`P^2 = P`).
      *
-     * Проверяется только для проекторов (theta и все варианты xi). Семейства
-     * `mu` и `lambda` — квазиинтерполянты, идемпотентностью они не обязаны обладать.
+     * Checked only for the projectors (theta and all variants of xi). The families `mu` and `lambda`
+     * are quasi-interpolants and are not required to be idempotent.
      *
-     * Коэффициенты берутся псевдослучайными с ФИКСИРОВАННЫМ зерном: тест обязан быть
-     * воспроизводимым.
+     * The coefficients are pseudo-random with a FIXED seed: the test must be reproducible.
      */
     @Test
     fun projectorsAreIdempotentOnSplines() {
@@ -252,28 +251,28 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < PROJECTION_TOLERANCE,
-            "Проекторы theta и xi должны быть идемпотентны на сплайнах, " +
-                "наибольшее отклонение = $deviation",
+            "The projectors theta and xi must be idempotent on splines, " +
+                "largest deviation = $deviation",
         )
     }
 
     /**
-     * Точность на порождающем пространстве: любое из четырёх семейств функционалов
-     * должно воспроизводить функции из `span{1, rho, sigma}` без погрешности.
+     * Exactness on the generating space: each of the four functional families must reproduce
+     * functions from `span{1, rho, sigma}` with no error.
      *
-     * Это минимальное требование к аппроксимационному оператору; его нарушение
-     * означает ошибку в построении коэффициентов функционалов.
+     * This is the minimal requirement on an approximation operator; its violation means an error in
+     * the construction of the functional coefficients.
      *
-     * Проверяется весь span: все три образующие `1`, `rho`, `sigma` и их линейная комбинация.
-     * Последняя обнаруживает ошибки, которые сокращаются на отдельных образующих, но не на общем
-     * элементе пространства.
+     * The whole span is checked: all three generators `1`, `rho`, `sigma` and their linear
+     * combination. The latter detects errors that cancel on the individual generators but not on a
+     * general element of the space.
      *
-     * Коэффициенты комбинации псевдослучайны с фиксированным зерном — тест обязан
-     * быть воспроизводимым (то же соглашение, что в [projectorsAreIdempotentOnSplines]).
+     * The coefficients of the combination are pseudo-random with a fixed seed — the test must be
+     * reproducible (the same convention as in [projectorsAreIdempotentOnSplines]).
      *
-     * Производные передаются до второго порядка: семейство xi при `r = 0` использует
-     * `fDD`, и без третьего аргумента оно получило бы нулевую вторую производную без сигнала об
-     * ошибке. В списке семейств стоит `r = 1`; добавление `r = 0` не должно ослаблять проверку.
+     * Derivatives up to the second order are passed: the xi family with `r = 0` uses `fDD`, and
+     * without the third argument it would silently receive a zero second derivative. The family list
+     * uses `r = 1`; adding `r = 0` must not weaken the check.
      */
     @Test
     fun allFamiliesAreExactOnGeneratingSpan() {
@@ -310,7 +309,7 @@ class SplineCoreHealthCheckTest {
                             val error = abs(member.g(t) - basis.evalSpline(projected, t))
                             if (error > deviation) {
                                 deviation = error
-                                worstLabel = "${funcs.name}/${system.name}/$gridName/${member.label} при t=$t"
+                                worstLabel = "${funcs.name}/${system.name}/$gridName/${member.label} at t=$t"
                             }
                         }
                     }
@@ -319,16 +318,16 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < PROJECTION_TOLERANCE,
-            "Все семейства функционалов должны быть точны на span{1, rho, sigma}, " +
-                "наибольшее отклонение = $deviation ($worstLabel)",
+            "All functional families must be exact on span{1, rho, sigma}, " +
+                "largest deviation = $deviation ($worstLabel)",
         )
     }
 
     /**
-     * Элемент порождающего пространства вместе с двумя производными и именем для
-     * сообщения об ошибке. Производные хранятся рядом с самой функцией, потому что
-     * семейство xi требует их одновременно со значением, и рассогласование между ними
-     * дало бы не ошибку компиляции, а неверную проверку без сигнала об ошибке.
+     * An element of the generating space together with its two derivatives and a name for the
+     * failure message. The derivatives are kept next to the function itself because the xi family
+     * requires them simultaneously with the value, and a mismatch between them would produce not a
+     * compilation error but a silently wrong check.
      */
     private data class SpanMember(
         val label: String,
@@ -338,13 +337,13 @@ class SplineCoreHealthCheckTest {
     )
 
     /**
-     * Проверка замкнутой формулы проекционных функционалов: на равномерной сетке с
-     * полиномиальной порождающей системой коэффициенты внутренних функционалов
-     * должны равняться `{1/14, -2/7, 10/7, -2/7, 1/14}`.
+     * Check of the closed formula for the projection functionals: on a uniform grid with the
+     * polynomial generating system the coefficients of the interior functionals must equal
+     * `{1/14, -2/7, 10/7, -2/7, 1/14}`.
      *
-     * Числа взяты из первоисточника (см. `docs/ИСТОЧНИКИ.md`, раздел
-     * «Аппроксимационные функционалы»), поэтому проверка сверяет реализацию
-     * с опубликованной формулой, а не с самой собой.
+     * The numbers are taken from the primary source (see `docs/REFERENCES.md`, section
+     * “Approximation functionals”), so the check verifies the implementation against the published
+     * formula rather than against itself.
      */
     @Test
     fun closedFormCoefficientsMatchPublishedValues() {
@@ -359,24 +358,23 @@ class SplineCoreHealthCheckTest {
         }
         assertTrue(
             deviation < EXACT_IDENTITY_TOLERANCE,
-            "Коэффициенты замкнутой формулы theta должны совпадать с опубликованными " +
-                "{1/14, -2/7, 10/7, -2/7, 1/14}, наибольшее отклонение = $deviation",
+            "The coefficients of the closed formula for theta must match the published " +
+                "{1/14, -2/7, 10/7, -2/7, 1/14}, largest deviation = $deviation",
         )
     }
 
     /**
-     * Замкнутая формула пригодна ТОЛЬКО для равномерной сетки.
+     * The closed formula is applicable ONLY to a uniform grid.
      *
-     * Симметричный набор весов `{E^2, -DE, CD-BE, -DE, E^2}/K1` даёт биортогональность
-     * лишь при `A = E` и `B = D` — это симметрия координатного сплайна относительно
-     * центра его носителя, имеющая место на равномерной сетке при чётной/нечётной паре
-     * порождающих. Вне этого случая формула не воспроизводит даже константу, поэтому
-     * она используется только как сверка на равномерной сетке (см.
-     * [closedFormCoefficientsMatchPublishedValues]), а рабочим путём остаётся решение
-     * локальной системы биортогональности.
+     * The symmetric set of weights `{E^2, -DE, CD-BE, -DE, E^2}/K1` yields biorthogonality only when
+     * `A = E` and `B = D` — this is the symmetry of the coordinate spline about the centre of its
+     * support, which holds on a uniform grid for an even/odd pair of generators. Outside this case
+     * the formula does not reproduce even a constant, so it is used only as a cross-check on a
+     * uniform grid (see [closedFormCoefficientsMatchPublishedValues]), while the working path
+     * remains the solution of the local biorthogonality system.
      *
-     * Проверяется воспроизведение константы: значение функционала на `f = 1` равно
-     * сумме его весов, поскольку `sum_j omega_j = 1`.
+     * Reproduction of a constant is checked: the value of the functional on `f = 1` equals the sum
+     * of its weights, since `sum_j omega_j = 1`.
      */
     @Test
     fun closedFormIsUniformGridOnly() {
@@ -391,21 +389,21 @@ class SplineCoreHealthCheckTest {
                 builtDefect = maxOf(builtDefect, abs(funcs.chi(j).apply(one, zero) - 1.0))
                 closedDefect = maxOf(closedDefect, abs(funcs.closedFormInternal(j).apply(one, zero) - 1.0))
             }
-            // Фактические дефекты при n = 8, ratio = 2: B — 0.2222222222222296,
-            // H — 0.2208866259181210, T — 0.2235658323679606. Точное значение для
-            // полиномиальной порождающей равно 2/9 и не убывает при измельчении.
+            // Actual defects at n = 8, ratio = 2: B — 0.2222222222222296,
+            // H — 0.2208866259181210, T — 0.2235658323679606. The exact value for the
+            // polynomial generating system is 2/9 and does not decrease under refinement.
             assertTrue(
                 closedDefect > CLOSED_FORM_GRADED_DEFECT_FLOOR,
-                "Замкнутая формула не биортогональна на неравномерной сетке, поэтому дефект " +
-                    "воспроизведения константы обязан быть большим; система ${system.name}, " +
-                    "дефект = $closedDefect",
+                "The closed formula is not biorthogonal on a non-uniform grid, hence the defect of " +
+                    "reproducing a constant must be large; system ${system.name}, " +
+                    "defect = $closedDefect",
             )
         }
-        // Фактический дефект основного пути при n = 8, ratio = 2: 1.7e-13.
+        // Actual defect of the main path at n = 8, ratio = 2: 1.7e-13.
         assertTrue(
             builtDefect < LINEAR_SOLVE_TOLERANCE,
-            "Основной путь построения theta должен воспроизводить константу на любой сетке, " +
-                "наибольшее отклонение = $builtDefect",
+            "The main construction path for theta must reproduce a constant on any grid, " +
+                "largest deviation = $builtDefect",
         )
     }
 }

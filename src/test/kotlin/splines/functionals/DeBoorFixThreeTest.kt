@@ -8,15 +8,15 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Тесты трёх функционалов де Бура--Фикса xi^<0>, xi^<1>, xi^<2>
- * Источники формул перечислены в docs/ИСТОЧНИКИ.md, раздел 2.
+ * Tests of the three de Boor--Fix functionals xi^<0>, xi^<1>, xi^<2>
+ * The sources of the formulas are listed in docs/REFERENCES.md, section 2.
  */
 @Tag("fast")
 class DeBoorFixThreeTest {
     private val grids = listOf(Grid.uniform(8), Grid.quasiUniform(8))
     private val systems = listOf(GeneratingSystem.B, GeneratingSystem.H, GeneratingSystem.T)
 
-    /** (а) Биортогональность xi^<r>_i(omega_j)=delta_ij для r=0,1,2, всех B/H/T, ВСЕХ i,j (вкл. краевые). */
+    /** (a) Biorthogonality xi^<r>_i(omega_j)=delta_ij for r=0,1,2, all of B/H/T, ALL i,j (boundary ones included). */
     @Test fun biorthogonalityAllRAllBasesIncludingBoundary() {
         for (grid in grids) for (sys in systems) {
             val basis = MinimalSplineBasis(sys, grid)
@@ -39,7 +39,7 @@ class DeBoorFixThreeTest {
         }
     }
 
-    /** (б) Точность проектора P_xi на span{1,rho,sigma} для каждого r и базиса. */
+    /** (b) Exactness of the projector P_xi on span{1,rho,sigma} for every r and basis. */
     @Test fun projectorExactOnGeneratingSpan() {
         val ts = (0..100).map { it / 100.0 }
         for (grid in grids) for (sys in systems) {

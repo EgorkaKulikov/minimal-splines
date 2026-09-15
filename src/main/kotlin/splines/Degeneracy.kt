@@ -3,35 +3,36 @@ package splines
 import kotlin.math.abs
 
 // ============================================================================
-// Критерий вырожденности скалярных знаменателей
+// Degeneracy criterion for scalar denominators
 // ============================================================================
 
 /**
- * Относительный порог значимости скалярной величины (знаменателя вектора `a_j`, вронскиана,
- * знаменателя `K1`) на её собственном масштабе.
+ * Relative significance threshold for a scalar quantity (the denominator of the vector `a_j`, the
+ * Wronskian, the denominator of `K1`) measured against its own scale.
  *
- * Все защищаемые величины являются алгебраическими суммами произведений входных данных, и их
- * вычисление подвержено потере значимости при взаимном сокращении слагаемых. Масштабом служит
- * сумма модулей слагаемых (см. [cancellationScale]); величина считается значимой при
- * `|value| > DEGENERACY_RELATIVE_EPS * scale` (см. [isSignificant]). Абсолютный порог здесь
- * неприменим: знаменатели узловых конструкций ведут себя как степени шага `h`, то есть зависят
- * от масштаба отрезка.
+ * All protected quantities are algebraic sums of products of the input data, so their evaluation is
+ * prone to loss of significance through mutual cancellation of the terms. The scale is the sum of the
+ * absolute values of the terms (see [cancellationScale]); a quantity is treated as significant when
+ * `|value| > DEGENERACY_RELATIVE_EPS * scale` (see [isSignificant]). An absolute threshold is not
+ * applicable here: the denominators of the nodal constructions behave like powers of the step `h`,
+ * that is, they depend on the scale of the interval.
  *
- * Значение 1e-12 отделяет величину, потерянную в шуме округления (порядка `1e-15 * scale` для
- * суммы нескольких произведений двух-трёх сомножителей), от малой, но достоверной величины.
- * Критерий контролирует потерю значимости, а не малость величины: малое значение, вычисленное
- * без сокращений, признаётся значимым. Следствие: на входах, где слагаемые велики, а их разность
- * остаётся O(1) (например, разделённые разности узлов на отрезках с `|x| ≳ 1e12`), величина
- * отбраковывается, поскольку в ней не остаётся достоверных разрядов.
+ * The value 1e-12 separates a quantity lost in round-off noise (of order `1e-15 * scale` for a sum of
+ * a few products of two or three factors) from a small but trustworthy quantity. The criterion
+ * controls loss of significance, not smallness: a small value computed without cancellation is
+ * accepted as significant. As a consequence, on inputs where the terms are large while their
+ * difference stays O(1) (for example, divided differences of nodes on intervals with `|x| ≳ 1e12`),
+ * the quantity is rejected, since no trustworthy digits are left in it.
  *
- * Матрицы аппроксимационного соотношения `M_k` этим критерием не проверяются: их обращение
- * контролируется оценкой числа обусловленности (см. [MinimalSplineBasis.MAX_CONDITION]).
+ * Approximation-relation matrices `M_k` are not checked by this criterion: their inversion is
+ * controlled by a condition number estimate (see [MinimalSplineBasis.MAX_CONDITION]).
  */
 internal const val DEGENERACY_RELATIVE_EPS = 1e-12
 
 /**
- * Масштаб алгебраической суммы: сумма модулей её слагаемых [terms] — верхняя оценка величины,
- * получаемой без взаимных сокращений; шум округления результата пропорционален этой величине.
+ * Scale of an algebraic sum: the sum of the absolute values of its terms [terms] — an upper bound for
+ * the quantity obtained without mutual cancellation; the round-off noise of the result is
+ * proportional to this value.
  */
 internal fun cancellationScale(vararg terms: Double): Double {
     var s = 0.0
@@ -40,12 +41,12 @@ internal fun cancellationScale(vararg terms: Double): Double {
 }
 
 /**
- * Значимость величины [value] на масштабе [scale]: `|value| > DEGENERACY_RELATIVE_EPS * scale`.
- * Неравенство строгое, поэтому при `scale == 0` (все слагаемые нулевые) возвращается `false`.
+ * Significance of the value [value] at the scale [scale]: `|value| > DEGENERACY_RELATIVE_EPS * scale`.
+ * The inequality is strict, so for `scale == 0` (all terms are zero) `false` is returned.
  */
 internal fun isSignificant(value: Double, scale: Double): Boolean =
     abs(value) > DEGENERACY_RELATIVE_EPS * scale
 
-/** Масштаб скалярного произведения в R^3: сумма модулей покомпонентных произведений. */
+/** Scale of a dot product in R^3: the sum of the absolute values of the componentwise products. */
 internal fun dot3Scale(u: DoubleArray, v: DoubleArray): Double =
     abs(u[0] * v[0]) + abs(u[1] * v[1]) + abs(u[2] * v[2])

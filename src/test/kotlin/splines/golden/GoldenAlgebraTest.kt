@@ -11,8 +11,8 @@ import splines.golden.GoldenIo.readGolden
 import splines.golden.GoldenIo.section
 
 /**
- * algebra.json: nonDegenerate — побитово (целочисленная логика); phi/wronskian — относительный
- * допуск [GoldenCompare.TRANSCENDENTAL_TOLERANCE] (система T вычисляется через `Math.sin`/`Math.cos`).
+ * algebra.json: nonDegenerate — bit for bit (integer logic); phi/wronskian — relative
+ * tolerance [GoldenCompare.TRANSCENDENTAL_TOLERANCE] (the T system is computed via `Math.sin`/`Math.cos`).
  */
 @Tag("fast")
 class GoldenAlgebraTest {
@@ -25,7 +25,7 @@ class GoldenAlgebraTest {
         val expPhi = section(root, "phi")
         val gotPhi = GoldenCompute.phiCases()
         val phi = expPhi.keys.map { key -> dynamicTest("phi/$key") { compare(expPhi[key], gotPhi[key], key, Mode.REL, TRANSCENDENTAL_TOLERANCE) } }
-        return nd + phi + dynamicTest("набор случаев") {
+        return nd + phi + dynamicTest("case set") {
             compare(expNd.keys.sorted(), gotNd.keys.sorted(), "nonDegenerate", Mode.BITS)
             compare(expPhi.keys.sorted(), gotPhi.keys.sorted(), "phi", Mode.BITS)
         }

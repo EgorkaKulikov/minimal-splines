@@ -1,29 +1,29 @@
-# CI библиотеки minimal-splines.
+# CI of the minimal-splines library.
 #
-# ЗАВИСИМОСТЬ ОТ numerical-core. Библиотека собирается против опубликованного
-# артефакта numerical-core из GitHub Packages
-# (https://maven.pkg.github.com/EgorkaKulikov/numerical-core; версия — numericalCoreVersion
-# в gradle.properties, репозиторий объявлен в repositories build.gradle.kts). GitHub Packages
-# требует аутентификацию даже на чтение, поэтому шагам gradle передаётся GITHUB_TOKEN
-# (встроенный токен читает пакеты того же владельца; для этого workflow нужно разрешение
-# packages: read; GITHUB_ACTOR runner выставляет сам).
+# DEPENDENCY ON numerical-core. The library is built against the published
+# numerical-core artifact from GitHub Packages
+# (https://maven.pkg.github.com/EgorkaKulikov/numerical-core; the version is numericalCoreVersion
+# in gradle.properties, the repository is declared in repositories of build.gradle.kts). GitHub Packages
+# requires authentication even for reading, so GITHUB_TOKEN is passed to the gradle steps
+# (the built-in token reads packages of the same owner; this workflow needs the
+# packages: read permission; GITHUB_ACTOR is set by the runner itself).
 #
-# Три задачи:
-#   * test — тесты на матрице «операционная система × реализация BLAS/LAPACK».
-#     Реализация задаётся свойством `numerics.backend` (java — переносимая реализация
-#     netlib F2J, native — системные BLAS/LAPACK через JNI). На Ubuntu системные
-#     библиотеки не предустановлены, поэтому для варианта native устанавливается
-#     libopenblas-dev: он даёт libblas.so.3 и liblapack.so.3 через alternatives.
-#     Без них netlib неявно переходит на F2J; переход обнаруживается отдельным шагом
-#     проверки реализации. Отчёт о покрытии и его порог (koverVerify, входит в check)
-#     снимаются на варианте ubuntu × java.
-#   * publish-check — публикация в локальный репозиторий Maven и проверка состава
-#     артефакта и его POM.
-#   * publish — публикация артефакта в GitHub Packages. Выполняется только при
-#     отправке тега вида vX.Y.Z и после успеха двух предыдущих задач.
+# Three jobs:
+#   * test — tests on the matrix "operating system × BLAS/LAPACK implementation".
+#     The implementation is selected by the `numerics.backend` property (java — the portable
+#     netlib F2J implementation, native — the system BLAS/LAPACK through JNI). On Ubuntu the system
+#     libraries are not preinstalled, so for the native variant libopenblas-dev is installed:
+#     it provides libblas.so.3 and liblapack.so.3 through alternatives.
+#     Without them netlib silently falls back to F2J; the fallback is detected by a separate
+#     implementation check step. The coverage report and its threshold (koverVerify, part of check)
+#     are taken on the ubuntu × java variant.
+#   * publish-check — publication to the local Maven repository and a check of the contents
+#     of the artifact and of its POM.
+#   * publish — publication of the artifact to GitHub Packages. Runs only when
+#     a tag of the form vX.Y.Z is pushed and after the two previous jobs succeed.
 #
-# Тесты проверяют математические инварианты (биортогональность, разбиение единицы,
-# точность на span) и допуски, не зависящие от машины.
+# The tests check mathematical invariants (biorthogonality, partition of unity,
+# exactness on span) and machine-independent tolerances.
 
 name: CI
 
@@ -38,17 +38,17 @@ permissions:
   packages: read
 
 env:
-  # Учётные данные для чтения numerical-core из GitHub Packages (см. repositories в build.gradle.kts).
+  # Credentials for reading numerical-core from GitHub Packages (see repositories in build.gradle.kts).
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# Новый запуск на той же ветке отменяет предыдущий незавершённый.
+# A new run on the same branch cancels the previous unfinished one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
-    name: Тесты (${{ matrix.os }}, ${{ matrix.backend }})
+    name: Tests (${{ matrix.os }}, ${{ matrix.backend }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -59,43 +59,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Установка JDK 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Настройка Gradle с кэшем
+      - name: Set up Gradle with cache
         uses: gradle/actions/setup-gradle@v6
 
-      # На macOS системные BLAS/LAPACK даёт Accelerate, ничего ставить не нужно.
-      - name: Установка системных BLAS/LAPACK (Ubuntu, native)
+      # On macOS the system BLAS/LAPACK is provided by Accelerate, nothing needs to be installed.
+      - name: Install system BLAS/LAPACK (Ubuntu, native)
         if: matrix.os == 'ubuntu-latest' && matrix.backend == 'native'
         run: sudo apt-get update && sudo apt-get install -y libopenblas-dev liblapack-dev
 
-      # Реализация по умолчанию обязана быть системной, иначе вариант native матрицы
-      # проверял бы то же, что и java: BackendSelectionTest сверяет Backends.default()
-      # с запрошенным свойством и завершается ошибкой при переходе на F2J.
-      - name: Проверка системной реализации BLAS/LAPACK
+      # The default implementation must be the system one, otherwise the native variant of the matrix
+      # would check the same thing as java: BackendSelectionTest compares Backends.default()
+      # with the requested property and fails if the fallback to F2J happened.
+      - name: Check the system BLAS/LAPACK implementation
         if: matrix.backend == 'native'
         run: ./gradlew test --tests splines.BackendSelectionTest -Dnumerics.backend=native --no-daemon
         env:
           OPENBLAS_NUM_THREADS: 4
 
-      - name: Тесты на реализации ${{ matrix.backend }}
+      - name: Tests on the ${{ matrix.backend }} implementation
         run: ./gradlew test -Dnumerics.backend=${{ matrix.backend }} --no-daemon
         env:
-          # Ограничение потоков системного OpenBLAS: многопоточный dgetrf на стандартном
-          # стеке потока завершал тестовую JVM сигналом (exit 139).
+          # Thread limit for the system OpenBLAS: the multithreaded dgetrf on the default
+          # thread stack terminated the test JVM with a signal (exit 139).
           OPENBLAS_NUM_THREADS: 4
 
-      # Полная проверка (check включает koverVerify) и отчёт о покрытии снимаются один раз,
-      # на самом воспроизводимом варианте матрицы (Ubuntu, чистая JVM-реализация).
-      - name: Проверка (check с планкой покрытия) и отчёт Kover
+      # The full check (check includes koverVerify) and the coverage report are taken once,
+      # on the most reproducible variant of the matrix (Ubuntu, pure JVM implementation).
+      - name: Check (check with the coverage bar) and Kover report
         if: matrix.os == 'ubuntu-latest' && matrix.backend == 'java'
         run: ./gradlew check koverXmlReport -Dnumerics.backend=java --no-daemon
 
-      - name: Отчёты тестов и покрытия
+      - name: Test and coverage reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -109,27 +109,27 @@ jobs:
           if-no-files-found: ignore
 
   publish-check:
-    name: Проверка публикации артефакта
+    name: Artifact publication check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Установка JDK 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Настройка Gradle с кэшем
+      - name: Set up Gradle with cache
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Локальная публикация артефакта (проверка POM и sources)
+      - name: Publish the artifact locally (check of the POM and of the sources)
         run: ./gradlew publishToMavenLocal --no-daemon
 
-      # Координаты и версия читаются из gradle.properties, чтобы проверка не
-      # расходилась со сборкой при смене версии.
-      - name: Проверка состава артефакта и POM
+      # The coordinates and the version are read from gradle.properties, so that the check does not
+      # diverge from the build when the version changes.
+      - name: Check the contents of the artifact and of the POM
         run: |
           set -eu
           group=$(grep '^group=' gradle.properties | cut -d= -f2 | tr . /)
@@ -137,16 +137,16 @@ jobs:
           dir="$HOME/.m2/repository/$group/minimal-splines/$version"
           ls -la "$dir"
           for f in "minimal-splines-$version.jar" "minimal-splines-$version-sources.jar" "minimal-splines-$version.pom"; do
-            test -s "$dir/$f" || { echo "отсутствует $dir/$f"; exit 1; }
+            test -s "$dir/$f" || { echo "missing $dir/$f"; exit 1; }
           done
           pom="$dir/minimal-splines-$version.pom"
-          # Зависимость на numerical-core обязана быть объявлена в области compile (api).
-          grep -q '<artifactId>numerical-core</artifactId>' "$pom" || { echo "POM не объявляет зависимость numerical-core"; exit 1; }
-          echo "артефакт $group:minimal-splines:$version опубликован корректно"
+          # The dependency on numerical-core must be declared in the compile scope (api).
+          grep -q '<artifactId>numerical-core</artifactId>' "$pom" || { echo "the POM does not declare the numerical-core dependency"; exit 1; }
+          echo "artifact $group:minimal-splines:$version published correctly"
 
   publish:
-    name: Публикация в GitHub Packages
-    # Только по тегу версии: отправка в ветки артефакт не публикует.
+    name: Publish to GitHub Packages
+    # On a version tag only: pushing to a branch does not publish the artifact.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [test, publish-check]
     runs-on: ubuntu-latest
@@ -157,17 +157,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Установка JDK 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Настройка Gradle с кэшем
+      - name: Set up Gradle with cache
         uses: gradle/actions/setup-gradle@v6
 
-      # Учётные данные для GitHub Packages: имя запустившего и встроенный токен рабочего процесса.
-      - name: Публикация артефакта в GitHub Packages
+      # Credentials for GitHub Packages: the name of the actor and the built-in workflow token.
+      - name: Publish the artifact to GitHub Packages
         run: ./gradlew publishAllPublicationsToGitHubPackagesRepository --no-daemon
         env:
           GITHUB_ACTOR: ${{ github.actor }}

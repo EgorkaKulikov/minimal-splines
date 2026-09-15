@@ -22,11 +22,11 @@ import kotlin.math.sin
 import kotlin.test.assertTrue
 
 /**
- * Согласие нативной (Accelerate/OpenBLAS) и чистой Java-реализаций BLAS/LAPACK: базис ω_j и
- * коэффициенты пяти семейств функционалов, построенные с двумя контекстами, должны совпадать
- * с точностью до ошибок округления. Тесты пропускаются, если нативная библиотека недоступна.
- * Измеренные максимумы расхождений записываются в `build/reports/backend-agreement.tsv`
- * (колонки `sys grid kind name maxRelDiff`).
+ * Agreement between the native (Accelerate/OpenBLAS) and the pure Java BLAS/LAPACK
+ * implementations: the basis ω_j and the coefficients of the five functional families, built with
+ * the two contexts, must coincide up to rounding errors. The tests are skipped if the native
+ * library is unavailable. The measured maximal discrepancies are written to
+ * `build/reports/backend-agreement.tsv` (columns `sys grid kind name maxRelDiff`).
  */
 @Tag("fast")
 class BackendAgreementTest {
@@ -44,7 +44,7 @@ class BackendAgreementTest {
     private val coeffTol = 1e-10
 
     private companion object {
-        /** Файл создаётся заново один раз на запуск JVM, далее только дополняется. */
+        /** The file is recreated once per JVM run and afterwards only appended to. */
         private val reportFile: File by lazy {
             File("build/reports/backend-agreement.tsv").also { file ->
                 file.parentFile.mkdirs()
@@ -77,15 +77,15 @@ class BackendAgreementTest {
     @TestFactory
     fun nativeAndJavaAgree(): List<DynamicTest> = systems.flatMap { sys ->
         grids.map { (gridName, grid) ->
-            dynamicTest("${sys.name} / $gridName: базис и пять семейств") {
-                assumeTrue(Backends.isNativeAvailable(), "нативная реализация BLAS/LAPACK недоступна")
+            dynamicTest("${sys.name} / $gridName: basis and five families") {
+                assumeTrue(Backends.isNativeAvailable(), "native BLAS/LAPACK implementation is unavailable")
                 val ctxN = NumericsContext(backend = Backends.native())
                 val ctxJ = NumericsContext(backend = Backends.java())
                 val basisN = MinimalSplineBasis(sys, grid, ctxN)
                 val basisJ = MinimalSplineBasis(sys, grid, ctxJ)
                 val out = report()
 
-                // Базис: ω_j в 100 точках отрезка для всех j.
+                // Basis: ω_j at 100 points of the interval, for all j.
                 val points = DoubleArray(100) { grid.a + (grid.b - grid.a) * (it + 0.5) / 100.0 }
                 var basisDiff = 0.0
                 for (j in -2..grid.n - 1) {
@@ -94,9 +94,9 @@ class BackendAgreementTest {
                     basisDiff = max(basisDiff, relDiff(wN, wJ))
                 }
                 out.appendText("${sys.name}\t$gridName\tbasis\tomega\t$basisDiff\n")
-                assertTrue(basisDiff <= basisTol, "${sys.name}/$gridName: расхождение базиса $basisDiff > $basisTol")
+                assertTrue(basisDiff <= basisTol, "${sys.name}/$gridName: basis discrepancy $basisDiff > $basisTol")
 
-                // Функционалы: коэффициенты квазипроектора на f = exp(sin 3t).
+                // Functionals: quasi-projector coefficients for f = exp(sin 3t).
                 val famN = families(basisN, ctxN)
                 val famJ = families(basisJ, ctxJ)
                 for ((fN, fJ) in famN.zip(famJ)) {
@@ -104,7 +104,7 @@ class BackendAgreementTest {
                     val cJ = fJ.projectorCoeffs(f, fD, fDD)
                     val d = relDiff(cN, cJ)
                     out.appendText("${sys.name}\t$gridName\tfunctional\t${fN.name}\t$d\n")
-                    assertTrue(d <= coeffTol, "${sys.name}/$gridName/${fN.name}: расхождение коэффициентов $d > $coeffTol")
+                    assertTrue(d <= coeffTol, "${sys.name}/$gridName/${fN.name}: coefficient discrepancy $d > $coeffTol")
                 }
             }
         }

@@ -8,13 +8,13 @@ import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * Максимум |exact − eval| по контрольной сетке `refinement·n + 1` точек, из которой исключён
- * краевой слой ширины `layer·h` с каждой стороны (h — максимальный шаг сетки).
+ * Maximum of |exact − eval| over a control grid of `refinement·n + 1` points, excluding a
+ * boundary layer of width `layer·h` on each side (h is the maximal grid step).
  *
- * Нужен для семейства ξ̃ (`DiscreteDeBoorFixFunctionals`): у кратных краевых узлов центральная
- * разность становится односторонней, и квазипроектор не воспроизводит span φ в краевом слое
- * (дефект ≈ h²). Это свойство конструкции, а не дефект реализации, поэтому точность на span φ
- * и порядок 3 для ξ̃ проверяются во внутренней области.
+ * Needed for the ξ̃ family (`DiscreteDeBoorFixFunctionals`): at multiple boundary nodes the central
+ * difference degenerates into a one-sided one, and the quasi-projector does not reproduce span φ in
+ * the boundary layer (defect ≈ h²). This is a property of the construction, not an implementation
+ * defect, hence exactness on span φ and order 3 for ξ̃ are checked in the interior region.
  */
 internal fun interiorErrorEh(
     exact: (Double) -> Double,
@@ -35,7 +35,7 @@ internal fun interiorErrorEh(
     return mx
 }
 
-/** Тестовая функция f, f', f'' в виде тройки лямбд. */
+/** Test function f, f', f'' as a triple of lambdas. */
 internal data class TestFunction(
     val f: (Double) -> Double,
     val fD: (Double) -> Double,
@@ -43,7 +43,7 @@ internal data class TestFunction(
 )
 
 /**
- * f(t) = exp(sin 3t), не лежащая в span φ ни одной из систем B, H, T;
+ * f(t) = exp(sin 3t), which lies in span φ of none of the systems B, H, T;
  * f' = 3 cos 3t · f, f'' = (−9 sin 3t + 9 cos² 3t) · f.
  */
 internal fun testFunction(): TestFunction = TestFunction(

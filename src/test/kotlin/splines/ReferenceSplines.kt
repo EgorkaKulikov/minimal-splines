@@ -1,8 +1,8 @@
 package splines
 
-/** Явные формулы квадратичных B- и H-сплайнов для сверки с общим построением. */
+/** Explicit formulas for quadratic B- and H-splines, for cross-checking the general construction. */
 object ReferenceSplines {
-    /** Классический квадратичный B-сплайн omega^B_j(t). */
+    /** Classical quadratic B-spline omega^B_j(t). */
     fun omegaB(grid: Grid, j: Int, t: Double): Double {
         val xj = grid.x(j); val xj1 = grid.x(j + 1); val xj2 = grid.x(j + 2); val xj3 = grid.x(j + 3)
         if (t < xj || t > xj3) return 0.0
@@ -16,7 +16,7 @@ object ReferenceSplines {
         }
     }
 
-    /** Производная эталонного B-сплайна. */
+    /** Derivative of the golden reference B-spline. */
     fun omegaBDeriv(grid: Grid, j: Int, t: Double): Double {
         val xj = grid.x(j); val xj1 = grid.x(j + 1); val xj2 = grid.x(j + 2); val xj3 = grid.x(j + 3)
         if (t < xj || t > xj3) return 0.0
@@ -30,7 +30,7 @@ object ReferenceSplines {
         }
     }
 
-    /** Гиперболический минимальный сплайн omega^H_j(t). */
+    /** Hyperbolic minimal spline omega^H_j(t). */
     fun omegaH(grid: Grid, j: Int, t: Double): Double {
         val xj = grid.x(j); val xj1 = grid.x(j + 1); val xj2 = grid.x(j + 2); val xj3 = grid.x(j + 3)
         if (t < xj || t > xj3) return 0.0
