@@ -13,8 +13,8 @@ import kotlin.test.assertEquals
 import kotlin.test.fail
 
 /**
- * grid.json: узлы, шаг, признаки совпадения — побитово (целочисленная логика и явные формулы);
- * сетки `quasiUniform` и `geometric` (узлы через `Math.sin`/`Math.pow`) — относительный допуск
+ * grid.json: nodes, step, coincidence flags — bit for bit (integer logic and explicit formulas);
+ * the `quasiUniform` and `geometric` grids (nodes computed via `Math.sin`/`Math.pow`) — relative tolerance
  * [GoldenCompare.TRANSCENDENTAL_TOLERANCE].
  */
 @Tag("fast")
@@ -24,7 +24,7 @@ class GoldenGridTest {
         val exp = section(readGolden("grid.json"), "grids")
         val cases = exp.keys.map { key ->
             dynamicTest(key) {
-                val g = GoldenInputs.grids[key] ?: fail("сетка $key отсутствует во входах")
+                val g = GoldenInputs.grids[key] ?: fail("grid $key is missing from the inputs")
                 if (key.startsWith("quasiUniform-") || key.startsWith("geometric-")) {
                     compare(exp[key], GoldenCompute.gridCase(g), key, Mode.REL, TRANSCENDENTAL_TOLERANCE)
                 } else {
@@ -32,6 +32,6 @@ class GoldenGridTest {
                 }
             }
         }
-        return cases + dynamicTest("набор сеток") { assertEquals(GoldenInputs.grids.keys, exp.keys) }
+        return cases + dynamicTest("grid set") { assertEquals(GoldenInputs.grids.keys, exp.keys) }
     }
 }

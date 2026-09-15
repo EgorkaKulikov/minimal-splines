@@ -77,7 +77,7 @@ Linux, macOS, Windows с установленной виртуальной ма�
 ## Состав материалов для депонирования
 
 - исходный код: каталог `src/main`;
-- документация: `README.md`, `docs/ТОЧНОСТЬ.md`, `docs/ИСТОЧНИКИ.md`, документация API
+- документация: `README.md`, `docs/ACCURACY.md`, `docs/REFERENCES.md`, документация API
   (`./gradlew dokkaHtml`);
 - результаты тестирования: 949 тестов, отчёт о покрытии Kover (`./gradlew build`, каталог
   `build/reports/kover`), таблицы измерений точности (`build/reports/*.tsv`);

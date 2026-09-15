@@ -22,20 +22,21 @@ import kotlin.math.sin
 import kotlin.test.assertTrue
 
 /**
- * Порядки сходимости квазиинтерполянтов на квадратичных минимальных сплайнах при измельчении
- * сетки: n = 8, 16, 32, 64, 128 на [0, 1], тестовая функция f(t) = exp(sin 3t), не лежащая
- * в span φ ни одной из систем B, H, T.
+ * Convergence orders of quasi-interpolants on quadratic minimal splines under grid refinement:
+ * n = 8, 16, 32, 64, 128 on [0, 1], with the test function f(t) = exp(sin 3t), which lies in
+ * span φ of none of the systems B, H, T.
  *
- * Проверяется:
- *  - монотонное убывание E_h;
- *  - порядок по значению на парах 32→64 и 64→128 в окне [2.7, 3.3] для θ, ξ, μ, λ
- *    (теоретический порядок 3);
- *  - для ξ̃ — порядок 3 во внутренней области (без краевого слоя в 3h) и порядок 2 по полной
- *    норме: односторонняя разность у кратных краевых узлов даёт краевой дефект O(h²);
- *  - порядок по производной для θ и ξ в окне [1.7, 2.3] (теоретический порядок 2).
+ * Checked:
+ *  - monotone decrease of E_h;
+ *  - the order by value on the pairs 32→64 and 64→128 within the window [2.7, 3.3] for θ, ξ, μ, λ
+ *    (theoretical order 3);
+ *  - for ξ̃ — order 3 in the interior region (excluding the boundary layer of width 3h) and order 2
+ *    in the full norm: the one-sided difference at multiple boundary nodes produces a boundary
+ *    defect O(h²);
+ *  - the order by derivative for θ and ξ within the window [1.7, 2.3] (theoretical order 2).
  *
- * Все измерения записываются в `build/reports/convergence-orders.tsv`
- * (колонки `sys family grid quantity n Eh order`).
+ * All measurements are written to `build/reports/convergence-orders.tsv`
+ * (columns `sys family grid quantity n Eh order`).
  */
 @Tag("fast")
 class ConvergenceOrderTest {
@@ -71,7 +72,7 @@ class ConvergenceOrderTest {
     private val valueWindow = 2.7..3.3
     private val derivWindow = 1.7..2.3
 
-    /** Индексы пар (32→64, 64→128) в списке порядков по [ns]. */
+    /** Indices of the pairs (32→64, 64→128) in the list of orders over [ns]. */
     private val checkedPairs = listOf(2, 3)
 
     private class Series(val eh: List<Double>) {
@@ -119,7 +120,7 @@ class ConvergenceOrderTest {
 
     private fun assertMonotone(label: String, s: Series) {
         for (i in 0 until s.eh.size - 1) {
-            assertTrue(s.eh[i + 1] < s.eh[i], "$label: E_h не убывает при n=${ns[i]}→${ns[i + 1]}; ${fmt(s)}")
+            assertTrue(s.eh[i + 1] < s.eh[i], "$label: E_h does not decrease at n=${ns[i]}→${ns[i + 1]}; ${fmt(s)}")
         }
     }
 
@@ -128,7 +129,7 @@ class ConvergenceOrderTest {
             val p = s.ord[i]
             assertTrue(
                 p.isFinite() && p in window,
-                "$label: порядок на паре n=${ns[i]}→${ns[i + 1]} равен ${"%.4f".format(p)}, окно $window; ${fmt(s)}",
+                "$label: the order on the pair n=${ns[i]}→${ns[i + 1]} is ${"%.4f".format(p)}, window $window; ${fmt(s)}",
             )
         }
     }
@@ -139,23 +140,23 @@ class ConvergenceOrderTest {
         for ((key, m) in results) {
             val (sysName, famName, gridName) = key
             val label = "$sysName/$famName/$gridName"
-            tests += dynamicTest("$label: E_h убывает монотонно") {
+            tests += dynamicTest("$label: E_h decreases monotonically") {
                 assertMonotone("$label value", m.value)
             }
             if (famName == "xitilde") {
-                tests += dynamicTest("$label: порядок 3 по значению во внутренней области") {
+                tests += dynamicTest("$label: order 3 by value in the interior region") {
                     assertOrders("$label interior", m.interior, valueWindow)
                 }
-                tests += dynamicTest("$label: порядок 2 по значению с краевым слоем") {
+                tests += dynamicTest("$label: order 2 by value including the boundary layer") {
                     assertOrders("$label value", m.value, derivWindow)
                 }
             } else {
-                tests += dynamicTest("$label: порядок 3 по значению") {
+                tests += dynamicTest("$label: order 3 by value") {
                     assertOrders("$label value", m.value, valueWindow)
                 }
             }
             if (famName == "theta" || famName == "xi") {
-                tests += dynamicTest("$label: порядок 2 по производной") {
+                tests += dynamicTest("$label: order 2 by derivative") {
                     assertOrders("$label deriv", m.deriv, derivWindow)
                 }
             }

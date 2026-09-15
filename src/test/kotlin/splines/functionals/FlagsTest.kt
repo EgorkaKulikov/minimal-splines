@@ -10,8 +10,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Тесты булевых флагов семейств: theta — проектор без производной, xi — проектор
- * с производной, mu/lambda — квазиинтерполянты. Покрывают геттеры свойств.
+ * Tests of the boolean family flags: theta is a projector without a derivative, xi is a projector
+ * with a derivative, mu/lambda are quasi-interpolants. They cover the property getters.
  */
 @Tag("fast")
 class FlagsTest {
@@ -25,7 +25,7 @@ class FlagsTest {
         assertEquals("theta", theta.name)
     }
 
-    /** Имена семейств соответствуют греческим обозначениям. */
+    /** The family names match the Greek notation. */
     @Test fun familyNames() {
         assertEquals("xi", DeBoorFixFunctionals(basis).name)
         assertEquals("mu", AveragingFunctionals(basis).name)

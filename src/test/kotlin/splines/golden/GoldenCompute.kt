@@ -17,9 +17,9 @@ import splines.metrics.errorEh
 import splines.nonDegenerate
 
 /**
- * Вычисление эталонных величин. Один и тот же код формирует эталон (GoldenGenerate)
- * и повторяет вычисление при проверке (Golden*Test): сравниваются деревья значений.
- * Числа кодируются шестнадцатеричными raw bits (см. GoldenIo).
+ * Computation of the reference quantities. The same code produces the golden reference (GoldenGenerate)
+ * and repeats the computation during verification (Golden*Test): trees of values are compared.
+ * Numbers are encoded as hexadecimal raw bits (see GoldenIo).
  */
 object GoldenCompute {
     fun meta(): Map<String, Any?> = linkedMapOf(
@@ -41,7 +41,7 @@ object GoldenCompute {
 
     // ---- basis.json ------------------------------------------------------------
 
-    /** Производные базисных функций пишутся только для n <= 8 (экономия объёма). */
+    /** Derivatives of the basis functions are written only for n <= 8 (to save space). */
     fun basisCase(sys: GeneratingSystem, g: Grid): Map<String, Any?> {
         val basis = MinimalSplineBasis(sys, g)
         val t = GoldenInputs.controlPoints(g)
@@ -81,12 +81,12 @@ object GoldenCompute {
         "discreteDeBoor-2" -> DiscreteDeBoorFixFunctionals(basis, 2)
         "averaging" -> AveragingFunctionals(basis)
         "threePoint" -> ThreePointFunctionals(basis)
-        else -> error("неизвестное семейство: $key")
+        else -> error("unknown family: $key")
     }
 
     /**
-     * Если построение семейства или вычисление бросает исключение, фиксируется его класс:
-     * это тоже поведение версии 0.1.0 (например, семейства на слишком коротких сетках).
+     * If building the family or the computation throws, its exception class is recorded:
+     * that is part of the 0.1.0 behaviour as well (for example, families on too short grids).
      */
     fun familyCase(key: String, basis: MinimalSplineBasis): Map<String, Any?> {
         val m = linkedMapOf<String, Any?>()

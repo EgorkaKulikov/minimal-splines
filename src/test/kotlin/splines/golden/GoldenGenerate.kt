@@ -9,12 +9,12 @@ import splines.golden.GoldenIo.writeGolden
 import java.io.File
 
 /**
- * Формирование эталонов: `./gradlew regenerateGolden`. Не входит в `test`
- * (тег `golden-generate` исключён); каталог задаётся свойством `golden.dir`.
+ * Generation of the golden references: `./gradlew regenerateGolden`. Not part of `test`
+ * (the `golden-generate` tag is excluded); the directory is set by the `golden.dir` property.
  */
 @Tag("golden-generate")
 class GoldenGenerate {
-    private val dir = File(System.getProperty("golden.dir") ?: error("системное свойство golden.dir не задано"))
+    private val dir = File(System.getProperty("golden.dir") ?: error("system property golden.dir is not set"))
 
     private fun root(vararg sections: Pair<String, Any?>): Map<String, Any?> =
         linkedMapOf<String, Any?>("generatedWith" to GoldenCompute.meta()).apply { putAll(sections) }

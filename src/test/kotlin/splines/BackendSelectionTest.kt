@@ -9,9 +9,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Реализация BLAS/LAPACK по умолчанию соответствует запрошенной свойством `numerics.backend`.
- * В CI на варианте native этот тест выполняется отдельным шагом до основного запуска тестов: без
- * системных библиотек netlib переключается на F2J, и вариант native проверял бы то же, что и java.
+ * The default BLAS/LAPACK implementation matches the one requested via the `numerics.backend`
+ * property. In CI, for the native variant this test runs as a separate step before the main test
+ * run: without the system libraries netlib falls back to F2J, and the native variant would then
+ * check exactly the same thing as the java one.
  */
 @Tag("fast")
 class BackendSelectionTest {

@@ -23,9 +23,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Свойства квадратичных минимальных сплайнов на случайных сетках (jqwik): разбиение единицы,
- * точность квазипроекторов на span φ (θ, ξ, μ, λ), биортогональность θ и ξ, идемпотентность,
- * инвариантность базиса к сдвигу (и масштабу для B), носитель и знак ω_j.
+ * Properties of quadratic minimal splines on random grids (jqwik): partition of unity,
+ * exactness of the quasi-projectors on span φ (θ, ξ, μ, λ), biorthogonality of θ and ξ, idempotency,
+ * shift invariance of the basis (and scale invariance for B), support and sign of ω_j.
  */
 @Tag("fast")
 class SplineProperties {
@@ -57,10 +57,10 @@ class SplineProperties {
     }
 
     /**
-     * Точность на span φ проверяется для четырёх семейств, точных по построению: θ, ξ, μ, λ.
-     * Семейство ξ̃ заменяет f'(x_{j+1}) разделённой разностью по узлам x_j, x_{j+2} и на span φ
-     * не точно: на неравномерной сетке погрешность коэффициента есть w·f''·(x_j + x_{j+2} − 2x_{j+1})/2,
-     * то есть O(h²) даже для B; для ξ̃ проверяется порядок сходимости (ConvergenceOrderTest).
+     * Exactness on span φ is checked for the four families that are exact by construction: θ, ξ, μ, λ.
+     * The ξ̃ family replaces f'(x_{j+1}) with a divided difference over the nodes x_j, x_{j+2} and is not
+     * exact on span φ: on a non-uniform grid the coefficient error is w·f''·(x_j + x_{j+2} − 2x_{j+1})/2,
+     * that is O(h²) even for B; for ξ̃ the convergence order is checked instead (ConvergenceOrderTest).
      */
     @Property(tries = 50)
     fun exactOnSpanPhi(@ForAll("gridCase") case: GridCase, @ForAll("coeffs") c: DoubleArray) {
@@ -127,24 +127,24 @@ class SplineProperties {
         val basis = MinimalSplineBasis(case.sys, grid)
         val pts = samplePoints(grid, 50, 29)
         val shifted = MinimalSplineBasis(case.sys, Grid(n, DoubleArray(n + 1) { grid.x(it) + s }))
-        // Аргумент t + s и узлы x_k + s округляются независимо: разность u = (t+s) − (x_k+s)
-        // отличается от t − x_k на величину ≈ ε·(|s| + |t|), а ω_j' = O(1/h_min). Это ошибка
-        // представления входа, а не свойство метода, поэтому допуск учитывает её явно.
+        // The argument t + s and the nodes x_k + s are rounded independently: the difference u = (t+s) − (x_k+s)
+        // differs from t − x_k by about ε·(|s| + |t|), while ω_j' = O(1/h_min). This is an error of the
+        // input representation, not a property of the method, so the tolerance accounts for it explicitly.
         val hMin = (0 until n).minOf { grid.x(it + 1) - grid.x(it) }
         val tolShift = 1e-12 + 16.0 * Math.ulp(1.0) * (abs(s) + abs(grid.a) + abs(grid.b)) / hMin
         for (j in -2 until n) for (t in pts) {
             val v0 = basis.omega(j, t)
             val v1 = shifted.omega(j, t + s)
-            assertTrue(abs(v0 - v1) <= tolShift, "$case, сдвиг s=$s: ω_$j($t)=$v0, ω_$j(t+s)=$v1, допуск $tolShift")
+            assertTrue(abs(v0 - v1) <= tolShift, "$case, shift s=$s: ω_$j($t)=$v0, ω_$j(t+s)=$v1, tolerance $tolShift")
         }
         if (case.sys === GeneratingSystem.B) {
             val scaled = MinimalSplineBasis(case.sys, Grid(n, DoubleArray(n + 1) { grid.x(it) * lambda }))
             for (j in -2 until n) for (t in pts) {
                 val v0 = basis.omega(j, t)
                 val v1 = scaled.omega(j, t * lambda)
-                // Округление λ·t и λ·x_k независимо: та же ошибка представления входа, что и при сдвиге.
+                // λ·t and λ·x_k are rounded independently: the same input representation error as for the shift.
                 val tolScale = 1e-12 + 16.0 * Math.ulp(1.0) * (abs(grid.a) + abs(grid.b)) / hMin
-                assertTrue(abs(v0 - v1) <= tolScale, "$case, масштаб λ=$lambda: ω_$j($t)=$v0, ω_$j(λt)=$v1, допуск $tolScale")
+                assertTrue(abs(v0 - v1) <= tolScale, "$case, scale λ=$lambda: ω_$j($t)=$v0, ω_$j(λt)=$v1, tolerance $tolScale")
             }
         }
     }
@@ -161,7 +161,7 @@ class SplineProperties {
         for (j in -2 until n) {
             val lo = grid.x(j)
             val hi = grid.x(j + 3)
-            // Вне носителя (внутри [a, b]) — ровно 0.0.
+            // Outside the support (but inside [a, b]) the value is exactly 0.0.
             var outside = 0
             var attempts = 0
             while (outside < 20 && attempts < 2000) {
@@ -169,15 +169,15 @@ class SplineProperties {
                 val t = grid.a + (grid.b - grid.a) * rnd.nextDouble()
                 if (t >= lo && t <= hi) continue
                 outside++
-                assertEquals(0.0, basis.omega(j, t), "$case: ω_$j($t) ≠ 0 вне [$lo, $hi]")
+                assertEquals(0.0, basis.omega(j, t), "$case: ω_$j($t) ≠ 0 outside [$lo, $hi]")
             }
-            // Внутри носителя — неотрицательность; для B — строгая положительность.
+            // Inside the support the value is non-negative; for B it is strictly positive.
             for (q in 1 until 40) {
                 val t = lo + (hi - lo) * q / 40.0
                 if (t < grid.a || t > grid.b || t <= lo || t >= hi) continue
                 val v = basis.omega(j, t)
-                assertTrue(v >= -1e-14, "$case: ω_$j($t) = $v < 0 внутри [$lo, $hi]")
-                if (case.sys === GeneratingSystem.B) assertTrue(v > 0.0, "$case: ω_$j($t) = $v не > 0")
+                assertTrue(v >= -1e-14, "$case: ω_$j($t) = $v < 0 inside [$lo, $hi]")
+                if (case.sys === GeneratingSystem.B) assertTrue(v > 0.0, "$case: ω_$j($t) = $v is not > 0")
             }
         }
     }

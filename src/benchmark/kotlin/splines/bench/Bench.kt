@@ -14,14 +14,14 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
 
-// Измерения производительности публичного API: построение базиса, три семейства
-// функционалов и вычисление сплайна. Не тест — запускается ./gradlew benchmark.
+// Performance measurements of the public API: building the basis, three families of
+// functionals and spline evaluation. Not a test — run it with ./gradlew benchmark.
 
 private fun f(t: Double) = exp(sin(3 * t))
 private fun fD(t: Double) = 3 * cos(3 * t) * exp(sin(3 * t))
 private fun fDD(t: Double) = (-9 * sin(3 * t) + 9 * cos(3 * t) * cos(3 * t)) * exp(sin(3 * t))
 
-/** Медиана из [reps] замеров (мс) после [warm] прогревов. */
+/** Median of [reps] measurements (ms) after [warm] warm-up runs. */
 fun median(warm: Int, reps: Int, block: () -> Unit): Double {
     repeat(warm) { block() }
     val t = DoubleArray(reps) {
@@ -33,7 +33,7 @@ fun median(warm: Int, reps: Int, block: () -> Unit): Double {
     return t[reps / 2]
 }
 
-/** Один замер: если он дольше 2 с — медиана из 3 после 1 прогрева, иначе из 5 после 3. */
+/** Single measurement: if it takes longer than 2 s, the median of 3 after 1 warm-up, otherwise of 5 after 3. */
 private fun timed(block: () -> Unit): Double {
     val s = System.nanoTime()
     block()
@@ -50,17 +50,17 @@ fun main(args: Array<String>) {
     println("jvm: ${System.getProperty("java.vm.name")} ${System.getProperty("java.version")}")
     println("date: ${OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)}")
     println()
-    println("| система | n | basis | theta | xi1 | mu | eval×10⁴ |")
+    println("| system | n | basis | theta | xi1 | mu | eval×10⁴ |")
     println("|---|---|---|---|---|---|---|")
     val systems = listOf(GeneratingSystem.B, GeneratingSystem.H)
     val evalCount = 10_000
     for (n in sizes) {
         for (sys in systems) {
             val grid = Grid.uniform(n, 0.0, 1.0)
-            // Побочный результат нужен, чтобы JIT не выбросил вычисление.
+            // The side effect is needed so that the JIT does not eliminate the computation.
             var sink = 0.0
-            // Базис может не строиться по критерию обусловленности (cond(M_k) > MAX_CONDITION):
-            // такая строка выводится с прочерками и причиной, остальные размеры измеряются.
+            // The basis may fail to build by the conditioning criterion (cond(M_k) > MAX_CONDITION):
+            // such a row is printed with dashes and the reason, the remaining sizes are still measured.
             val basis = try {
                 MinimalSplineBasis(sys, grid)
             } catch (e: IllegalArgumentException) {

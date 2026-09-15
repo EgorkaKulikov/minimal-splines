@@ -7,7 +7,7 @@ import net.jqwik.api.RandomDistribution
 import splines.GeneratingSystem
 import splines.Grid
 
-/** Случайная сетка вместе с системой: для T длина отрезка ограничена (вронскиан не меняет знак). */
+/** A random grid together with its system: for T the interval length is bounded (the Wronskian keeps its sign). */
 data class GridCase(val sys: GeneratingSystem, val grid: Grid) {
     override fun toString(): String =
         "GridCase(sys=${sys.name}, n=${grid.n}, a=${grid.a}, b=${grid.b}, h=${grid.h})"
@@ -20,9 +20,9 @@ object Generators {
         Arbitraries.of(GeneratingSystem.B, GeneratingSystem.H, GeneratingSystem.T)
 
     /**
-     * Внутренние узлы в [0, 1] через n положительных шагов с отношением соседних шагов не более
-     * 1000: относительный зазор автоматически >= 1/(1000·n) > 1e-3/n, без отбраковки (фильтр по
-     * зазору на биасированном генераторе jqwik давал TooManyFilterMisses).
+     * Interior nodes in [0, 1] built from n positive steps whose neighbouring ratio is at most
+     * 1000: the relative gap is automatically >= 1/(1000·n) > 1e-3/n, with no rejection (a gap filter
+     * on jqwik's biased generator produced TooManyFilterMisses).
      */
     private fun unitInterior(n: Int): Arbitrary<DoubleArray> =
         Arbitraries.doubles().between(1.0, 1000.0).ofScale(3)

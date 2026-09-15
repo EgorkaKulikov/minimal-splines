@@ -8,14 +8,14 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * Детерминированные входы golden-тестов. Никакой случайности: все сетки, точки,
- * функции и коэффициенты заданы явными формулами, чтобы эталон и проверка
- * строились из одних и тех же значений на любой платформе.
+ * Deterministic inputs of the golden tests. No randomness: all grids, points,
+ * functions and coefficients are given by explicit formulas, so that the golden reference and the
+ * check are built from the same values on any platform.
  */
 object GoldenInputs {
     val NS: List<Int> = listOf(1, 2, 4, 8, 16, 32)
 
-    /** Все сетки в детерминированном порядке; ключ вида `type-n` (плюс два особых). */
+    /** All grids in a deterministic order; the key has the form `type-n` (plus two special ones). */
     val grids: LinkedHashMap<String, Grid> = linkedMapOf<String, Grid>().apply {
         for (n in NS) {
             put("uniform-$n", Grid.uniform(n, 0.0, 1.0))
@@ -25,9 +25,9 @@ object GoldenInputs {
                 put("graded-$n", Grid.graded(n, 0.0, 1.0))
             }
         }
-        // Отрезок длины 4 > pi: T-система здесь не строится (вронскиан меняет знак).
+        // Interval of length 4 > pi: the T system cannot be built here (the Wronskian changes sign).
         put("uniform-8-wide", Grid.uniform(8, -1.5, 2.5))
-        // Отрезок длины 2 < pi: дополнительная сетка для T-системы.
+        // Interval of length 2 < pi: an extra grid for the T system.
         put("uniform-8-T", Grid.uniform(8, 0.0, 2.0))
     }
 
@@ -37,17 +37,17 @@ object GoldenInputs {
         "T" to GeneratingSystem.T,
     )
 
-    /** T допустима только на отрезках длины строго меньше pi. */
+    /** T is admissible only on intervals of length strictly less than pi. */
     fun allowed(sysName: String, grid: Grid): Boolean = sysName != "T" || (grid.b - grid.a) < PI
 
-    /** Пары (система, сетка), для которых базис определён. */
+    /** Pairs (system, grid) for which the basis is defined. */
     fun basisCases(maxN: Int = Int.MAX_VALUE): List<Triple<String, String, Grid>> = buildList {
         for ((sName, _) in systems) for ((gName, g) in grids) {
             if (g.n <= maxN && allowed(sName, g)) add(Triple(sName, gName, g))
         }
     }
 
-    /** 7 точек строго внутри каждого интервала сетки: x_k + (x_{k+1} - x_k)(i + 0.5)/7. */
+    /** 7 points strictly inside every grid interval: x_k + (x_{k+1} - x_k)(i + 0.5)/7. */
     fun controlPoints(grid: Grid): DoubleArray {
         val out = DoubleArray(7 * grid.n)
         var p = 0
@@ -96,9 +96,9 @@ object GoldenInputs {
         ),
     )
 
-    /** Коэффициенты сплайна длины n+2: c_j = sin(1.7 j + 0.3). */
+    /** Spline coefficients of length n+2: c_j = sin(1.7 j + 0.3). */
     fun coeffs(n: Int): DoubleArray = DoubleArray(n + 2) { sin(1.7 * it + 0.3) }
 
-    /** 20 точек на [-0.5, 2] для phi/phiD/phiDD/wronskian. */
+    /** 20 points on [-0.5, 2] for phi/phiD/phiDD/wronskian. */
     val phiPoints: DoubleArray = DoubleArray(20) { -0.5 + 2.5 * (it + 0.5) / 20.0 }
 }

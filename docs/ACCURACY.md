@@ -1,156 +1,156 @@
-# Точность и пределы применимости
+# Accuracy and limits of applicability
 
-В документе описаны математическая постановка, способ вычисления, обеспечивающий независимость
-обусловленности от сетки и отрезка, измеренные порядки сходимости квазиинтерполянтов и границы, за
-которыми построение завершается исключением. Все числа получены тестами библиотеки; соответствующие
-таблицы формируются командой `./gradlew test` в каталоге `build/reports` (файлы `*.tsv`, названные
-ниже по разделам).
+This document describes the mathematical problem statement, the evaluation scheme that makes the
+conditioning independent of the grid and of the interval, the measured convergence orders of the
+quasi-interpolants, and the limits beyond which the construction terminates with an exception. All the
+numbers come from the tests of the library; the corresponding tables are produced by `./gradlew test`
+in the `build/reports` directory (the `*.tsv` files named below in each section).
 
-## Постановка
+## Problem statement
 
-Порождающей системой называется вектор-функция φ(t) = (1, ρ(t), σ(t))ᵀ с невырожденным вронскианом
-det(φ, φ', φ''). Встроены системы `GeneratingSystem.B` (1, t, t²), `H` (1, sinh t, cosh t) и
-`T` (1, sin t, cos t); пользовательская система задаётся функциями ρ, σ и их производными до
-второго порядка. Сетка `Grid` на отрезке [a, b] состоит из n интервалов с тройными узлами на концах:
+A generating system is a vector function φ(t) = (1, ρ(t), σ(t))ᵀ with a non-degenerate Wronskian
+det(φ, φ', φ''). The built-in systems are `GeneratingSystem.B` (1, t, t²), `H` (1, sinh t, cosh t) and
+`T` (1, sin t, cos t); a user-defined system is given by the functions ρ, σ and their derivatives up to
+the second order. A `Grid` on the interval [a, b] consists of n intervals with triple nodes at the ends:
 x₋₂ = x₋₁ = x₀ = a, x_n = x_{n+1} = x_{n+2} = b.
 
-Базис квадратичных минимальных сплайнов {ω_j}, j = −2, …, n − 1, определяется аппроксимационным
-соотношением
+The basis of quadratic minimal splines {ω_j}, j = −2, …, n − 1, is determined by the approximation
+relation
 
     Σ_j a_j ω_j(t) = φ(t),   t ∈ [a, b],
 
-в котором векторы a_j ∈ ℝ³ строятся по значениям φ и φ' в узлах x_{j+1}, x_{j+2}: a_j есть
-направляющий вектор пересечения плоскостей span{φ(x_{j+1}), φ'(x_{j+1})} и span{φ(x_{j+2}), φ'(x_{j+2})},
-нормированный условием a_j = φ(x_{j+1}) − c φ'(x_{j+1}). На интервале (x_k, x_{k+1}) отличны от нуля
-ровно три функции ω_{k−2}, ω_{k−1}, ω_k, и соотношение принимает вид M_k ω(t) = φ(t) с матрицей
-M_k = (a_{k−2} | a_{k−1} | a_k), откуда ω(t) = M_k⁻¹ φ(t). Носитель ω_j равен [x_j, x_{j+3}]; из первой
-компоненты φ₀ ≡ 1 следует разбиение единицы Σ_j ω_j ≡ 1; сплайны принадлежат C¹[a, b] и точно
-воспроизводят span{1, ρ, σ}.
+in which the vectors a_j ∈ ℝ³ are built from the values of φ and φ' at the nodes x_{j+1}, x_{j+2}: a_j is
+the direction vector of the intersection of the planes span{φ(x_{j+1}), φ'(x_{j+1})} and span{φ(x_{j+2}), φ'(x_{j+2})},
+normalized by the condition a_j = φ(x_{j+1}) − c φ'(x_{j+1}). On the interval (x_k, x_{k+1}) exactly three
+functions ω_{k−2}, ω_{k−1}, ω_k are non-zero, and the relation takes the form M_k ω(t) = φ(t) with the matrix
+M_k = (a_{k−2} | a_{k−1} | a_k), whence ω(t) = M_k⁻¹ φ(t). The support of ω_j is [x_j, x_{j+3}]; the first
+component φ₀ ≡ 1 yields the partition of unity Σ_j ω_j ≡ 1; the splines belong to C¹[a, b] and reproduce
+span{1, ρ, σ} exactly.
 
-Квазиинтерполянт функции g имеет вид P_χ g = Σ_j χ_j(g) ω_j, где χ_j — линейные функционалы,
-зависящие от g только на носителе [x_j, x_{j+3}]. Семейства θ (`ProjFunctionals`) и ξ^⟨r⟩
-(`DeBoorFixFunctionals`, r ∈ {0, 1, 2}) биортогональны базису, χ_i(ω_j) = δ_ij, и потому P_χ является
-проектором на пространство сплайнов. Семейства ξ̃ (`DiscreteDeBoorFixFunctionals`), μ
-(`AveragingFunctionals`) и λ (`ThreePointFunctionals`) проекторами не являются, но μ и λ точны на
-span{1, ρ, σ}. Погрешность измеряется функцией `errorEh`: максимум |g − P_χ g| по равномерной
-контрольной сетке с `DEFAULT_CONTROL_REFINEMENT = 100` точками на интервал.
+The quasi-interpolant of a function g has the form P_χ g = Σ_j χ_j(g) ω_j, where the χ_j are linear functionals
+that depend on g only on the support [x_j, x_{j+3}]. The families θ (`ProjFunctionals`) and ξ^⟨r⟩
+(`DeBoorFixFunctionals`, r ∈ {0, 1, 2}) are biorthogonal to the basis, χ_i(ω_j) = δ_ij, and therefore P_χ is
+a projector onto the spline space. The families ξ̃ (`DiscreteDeBoorFixFunctionals`), μ
+(`AveragingFunctionals`) and λ (`ThreePointFunctionals`) are not projectors, but μ and λ are exact on
+span{1, ρ, σ}. The error is measured by the function `errorEh`: the maximum of |g − P_χ g| over a uniform
+control grid with `DEFAULT_CONTROL_REFINEMENT = 100` points per interval.
 
-## Локальные координаты интервала
+## Local interval coordinates
 
-Прямое обращение M_k в глобальной переменной t непригодно для больших n и для отрезков, удалённых от
-нуля или отличных от единицы по длине. Столбцы M_k содержат значения φ в соседних узлах и при малом
-шаге h почти коллинеарны: для системы B на [0, 1] число обусловленности растёт как n² — от 1.7·10³
-при n = 10 до 1.8·10⁹ при n = 10⁴, а на отрезках [0, 10⁶] и [0, 10⁻⁶] достигает 3·10¹⁶, то есть
-уровня, при котором обратная матрица не содержит верных цифр. Функционалы ξ, вычисляемые по разностям
-значений ρ, σ, теряли биортогональность как 1/L² с длиной отрезка L: для системы H на [0, 10⁻³]
-невязка биортогональности составляла 3·10⁻⁸, а на [100, 101] построение завершалось исключением
-из-за взаимного сокращения слагаемых порядка e¹⁰⁰ (файлы `conditioning-diagnostic.tsv`,
+Inverting M_k directly in the global variable t is unusable for large n and for intervals that are far from
+zero or whose length differs from one. The columns of M_k contain the values of φ at neighbouring nodes and, for a small
+step h, are nearly collinear: for the system B on [0, 1] the condition number grows as n² — from 1.7·10³
+at n = 10 to 1.8·10⁹ at n = 10⁴, and on the intervals [0, 10⁶] and [0, 10⁻⁶] it reaches 3·10¹⁶, that is,
+the level at which the inverse matrix contains no correct digits. The functionals ξ, computed from differences
+of the values of ρ, σ, lost biorthogonality as 1/L² with the interval length L: for the system H on [0, 10⁻³] the
+biorthogonality residual was 3·10⁻⁸, and on [100, 101] the construction terminated with an exception
+because of the mutual cancellation of terms of order e¹⁰⁰ (files `conditioning-diagnostic.tsv`,
 `conditioning-diagnostic-segments.tsv`, `xi-diagnostic.tsv`).
 
-Причина состоит не в самой задаче, а в выборе координат. Аппроксимационное соотношение инвариантно
-относительно замены φ → Tφ с невырожденной матрицей T: левое умножение даёт (T M_k) ω(t) = Tφ(t) с
-тем же решением ω(t), а вектор a_j ковариантен, a_j^{Tφ} = T a_j^{φ}, поскольку коэффициент c есть
-отношение двух скалярных произведений с одной и той же нормалью φ(x_{j+2}) × φ'(x_{j+2}). Поэтому на
-каждом интервале (x_k, x_{k+1}) используется локальное представление ψ_k = T_k φ
-(`GeneratingSystem.localFrame`, класс `LocalFrame`), компоненты которого имеют порядок единицы:
+The cause lies not in the problem itself but in the choice of coordinates. The approximation relation is invariant
+under the substitution φ → Tφ with a non-singular matrix T: multiplying from the left gives (T M_k) ω(t) = Tφ(t) with
+the same solution ω(t), and the vector a_j is covariant, a_j^{Tφ} = T a_j^{φ}, because the coefficient c is
+the ratio of two scalar products with one and the same normal φ(x_{j+2}) × φ'(x_{j+2}). Therefore, on
+every interval (x_k, x_{k+1}) the local representation ψ_k = T_k φ is used
+(`GeneratingSystem.localFrame`, class `LocalFrame`), whose components are of order one:
 
-| Система | ψ_k(t), u = t − x_k, h = x_{k+1} − x_k, l = min(h, 1) |
+| System | ψ_k(t), u = t − x_k, h = x_{k+1} − x_k, l = min(h, 1) |
 |---|---|
 | B | (1, s, s²), s = u/h |
 | H | (1, sinh(u)/l, 2 sinh²(u/2)/l²) |
 | T | (1, sin(u)/l, 2 sin²(u/2)/l²) |
 
-Третьи компоненты для H и T записаны через квадрат половинного аргумента, а не как (cosh u − 1)/l²
-и (1 − cos u)/l², чтобы избежать вычитания близких чисел. Матрица T_k M_k = (T_k a_{k−2} | T_k a_{k−1} | T_k a_k)
-собирается той же формулой для a_j, записанной для ψ_k вместо φ, и обращается средствами numerical-core.
-Её число обусловленности равно 13 для системы B и 21 для систем H и T при любом числе интервалов и
-любом отрезке на равномерной сетке (`conditioning-diagnostic.tsv`). Невязка биортогональности функционалов ξ в локальных
-координатах не превышает 5·10⁻¹⁶ на отрезках длины от 10⁻⁴ до 1 (`xi-diagnostic.tsv`), а относительная
-погрешность воспроизведения функции из span φ семействами θ, ξ, μ и λ при n = 10⁴ на [0, 1] и на
-отрезке [100, 101] не превышает 10⁻¹⁵ (`functionals-diagnostic.tsv`).
+The third components for H and T are written through the square of the half argument rather than as (cosh u − 1)/l²
+and (1 − cos u)/l², in order to avoid the subtraction of close numbers. The matrix T_k M_k = (T_k a_{k−2} | T_k a_{k−1} | T_k a_k)
+is assembled by the same formula for a_j, written for ψ_k instead of φ, and is inverted by numerical-core.
+Its condition number equals 13 for the system B and 21 for the systems H and T for any number of intervals and
+any interval on a uniform grid (`conditioning-diagnostic.tsv`). The biorthogonality residual of the functionals ξ in local
+coordinates does not exceed 5·10⁻¹⁶ on intervals of length from 10⁻⁴ to 1 (`xi-diagnostic.tsv`), and the relative
+error of reproducing a function from span φ by the families θ, ξ, μ and λ at n = 10⁴ on [0, 1] and on the
+interval [100, 101] does not exceed 10⁻¹⁵ (`functionals-diagnostic.tsv`).
 
-Критерием вырожденности служит оценка числа обусловленности T_k M_k: если она превышает
-`MinimalSplineBasis.MAX_CONDITION = 10⁸`, возбуждается исключение с указанием интервала. Порог означает,
-что в обратной матрице сохраняется не менее восьми значащих цифр из шестнадцати; для встроенных
-систем на невырожденной сетке значение 13 или 21 от него далеко, и срабатывание порога указывает на
-вырожденность самой сетки или пользовательской системы. Отдельно проверяется представимость ψ_k в
-двойной точности: для системы H величина sinh(u/l) переполняется при u/l > 710, то есть при шаге
-h > 355, и исключение сообщает интервал и узел, в котором значение нефинитно.
+The degeneracy criterion is an estimate of the condition number of T_k M_k: if it exceeds
+`MinimalSplineBasis.MAX_CONDITION = 10⁸`, an exception is raised indicating the interval. The threshold means
+that the inverse matrix retains at least eight significant digits out of sixteen; for the built-in
+systems on a non-degenerate grid the value 13 or 21 is far from it, and hitting the threshold points to
+a degeneracy of the grid itself or of the user-defined system. The representability of ψ_k in
+double precision is checked separately: for the system H the quantity sinh(u/l) overflows when u/l > 710, that is, for a step
+h > 355, and the exception reports the interval and the node at which the value is non-finite.
 
-Пользовательская `GeneratingSystem`, для которой локальное представление не задано, вычисляется в
-глобальных координатах (T_k = I). Для систем (1, eᵗ, e²ᵗ) на [0, 1] и (1, t, t³) на [1, 2] при n = 50
-разбиение единицы выполняется с точностью 2·10⁻¹² (`boundary-cases.tsv`); поведение при больших n и на
-удалённых отрезках для таких систем определяется обусловленностью M_k в глобальных координатах.
+A user-defined `GeneratingSystem` for which no local representation is given is evaluated in
+global coordinates (T_k = I). For the systems (1, eᵗ, e²ᵗ) on [0, 1] and (1, t, t³) on [1, 2] at n = 50 the
+partition of unity holds to an accuracy of 2·10⁻¹² (`boundary-cases.tsv`); the behaviour for large n and on
+distant intervals for such systems is determined by the conditioning of M_k in global coordinates.
 
-## Порядки сходимости
+## Convergence orders
 
-Наблюдаемый порядок p = log₂(E_h / E_{h/2}) измерен на функции f(t) = exp(sin 3t), t ∈ [0, 1], при
-n = 8, 16, …, 128 на равномерной сетке `Grid.uniform` и на сетке `Grid.quasiUniform` с возмущением
-узлов; в таблице приведены значения для пары n = 64 → 128 (`convergence-orders.tsv`). Результаты
-для систем B, H и T совпадают с точностью до третьего знака: на интервале длины h гладкая функция
-приближается элементом каждого из пространств span φ с погрешностью O(h³), и различие между
-системами проявляется лишь в постоянной.
+The observed order p = log₂(E_h / E_{h/2}) was measured on the function f(t) = exp(sin 3t), t ∈ [0, 1], at
+n = 8, 16, …, 128 on the uniform grid `Grid.uniform` and on the grid `Grid.quasiUniform` with perturbed
+nodes; the table gives the values for the pair n = 64 → 128 (`convergence-orders.tsv`). The results
+for the systems B, H and T agree to the third digit: on an interval of length h a smooth function
+is approximated by an element of each of the spaces span φ with error O(h³), and the difference between the
+systems shows up only in the constant.
 
-| Семейство | Порядок для значений | Порядок для производной | E_h при n = 128 |
+| Family | Order for the values | Order for the derivative | E_h at n = 128 |
 |---|---|---|---|
 | θ | 3.003–3.007 | 1.98–2.00 | 4.2·10⁻⁷ |
 | ξ = ξ^⟨1⟩ | 2.999–3.004 | 1.98–2.00 | 2.6·10⁻⁶ |
 | μ | 3.045–3.081 | — | — |
 | λ | 3.018–3.030 | — | — |
-| ξ̃, внутренние интервалы | 2.996–2.998 | — | 7·10⁻⁶ |
-| ξ̃, весь отрезок | 1.993–1.999 | ≈ 1.0 | 4.6·10⁻⁵ |
+| ξ̃, interior intervals | 2.996–2.998 | — | 7·10⁻⁶ |
+| ξ̃, whole interval | 1.993–1.999 | ≈ 1.0 | 4.6·10⁻⁵ |
 
-Семейства θ, ξ, μ и λ имеют третий порядок по значениям и второй по первой производной, как и следует
-из точности на span φ для квадратичных сплайнов класса C¹. Проекторы θ и ξ при одинаковом порядке
-различаются постоянной: измеренная погрешность ξ в шесть раз больше погрешности θ.
+The families θ, ξ, μ and λ have the third order for the values and the second for the first derivative, as follows
+from the exactness on span φ for quadratic splines of class C¹. At equal order, the projectors θ and ξ
+differ in the constant: the measured error of ξ is six times the error of θ.
 
-## Функционалы ξ̃
+## The functionals ξ̃
 
-Семейство ξ̃^⟨r⟩, r ∈ {1, 2}, получается из ξ^⟨r⟩ заменой производной g' центральной разделённой
-разностью по соседним узлам сетки. Функционал использует только значения g, но перестаёт быть точным
-на span φ: на неравномерной сетке погрешность коэффициента имеет порядок O(h² |g''|), и на
-внутренних интервалах наблюдаемый порядок остаётся третьим.
+The family ξ̃^⟨r⟩, r ∈ {1, 2}, is obtained from ξ^⟨r⟩ by replacing the derivative g' with the central divided
+difference over the neighbouring grid nodes. The functional uses only the values of g, but is no longer exact
+on span φ: on a non-uniform grid the error of the coefficient is of order O(h² |g''|), and on the
+interior intervals the observed order remains third.
 
-На краях отрезка узлы кратны, x₋₂ = x₋₁ = x₀, и центральная разность вырождается в одностороннюю.
-Погрешность разностного приближения производной становится величиной первого порядка по h, что для
-функций из span φ даёт отклонение сплайна ≈ 0.9975·h² в краевом слое шириной около 3h; на всём
-отрезке порядок понижается до второго по значениям и до первого по производной. Это свойство
-конструкции, а не реализации: измеренный дефект совпадает с предсказанным разложением Тейлора для
-односторонней разности. При необходимости третьего порядка на всём отрезке следует использовать
-семейства θ, μ или λ, не требующие производной.
+At the ends of the interval the nodes are multiple, x₋₂ = x₋₁ = x₀, and the central difference degenerates into a one-sided one.
+The error of the difference approximation of the derivative becomes a first-order quantity in h, which for
+functions from span φ gives a spline deviation of ≈ 0.9975·h² in a boundary layer of width about 3h; over the whole
+interval the order drops to the second for the values and to the first for the derivative. This is a property of the
+construction, not of the implementation: the measured defect matches the defect predicted by the Taylor expansion of the
+one-sided difference. If the third order is required over the whole interval, the families θ, μ or λ, which do not
+require the derivative, should be used.
 
-## Пределы применимости
+## Limits of applicability
 
-Тригонометрическая система применима на отрезке длины меньше π. При большей длине среди точек,
-участвующих в построении, встречаются пары на расстоянии π, для которых определитель из производных
-ρ и σ, равный sin разности аргументов, обращается в нуль; построение базиса или функционалов
-завершается исключением о вырожденности.
+The trigonometric system is applicable on an interval of length less than π. For a greater length, among the points
+involved in the construction there are pairs at distance π, for which the determinant built from the derivatives
+of ρ and σ, equal to the sine of the difference of the arguments, vanishes; the construction of the basis or of the functionals
+terminates with a degeneracy exception.
 
-Гиперболическая система ограничена диапазоном double: при шаге сетки h > 355 значения sinh(u/l)
-нефинитны, и построение завершается исключением о переполнении с указанием интервала. Отрезок
-[0, 10⁶] при n = 100 (h = 10⁴) для системы H не представим; тот же отрезок для системы B строится
-с числом обусловленности 13 (`conditioning-diagnostic-segments.tsv`).
+The hyperbolic system is limited by the double range: for a grid step h > 355 the values of sinh(u/l) are
+non-finite, and the construction terminates with an overflow exception indicating the interval. The interval
+[0, 10⁶] at n = 100 (h = 10⁴) is not representable for the system H; the same interval for the system B is built
+with condition number 13 (`conditioning-diagnostic-segments.tsv`).
 
-Вырожденность аппроксимационного соотношения и знаменателей функционалов проверяется относительным
-критерием: величина считается незначимой, если она меньше `DEGENERACY_RELATIVE_EPS = 10⁻¹²` от суммы
-модулей слагаемых, из которых получена. Критерий не зависит от масштаба отрезка, в отличие от
-абсолютного порога, и срабатывает при совпадении узлов вне краёв сетки и при вырожденной
-пользовательской системе.
+The degeneracy of the approximation relation and of the denominators of the functionals is checked by a relative
+criterion: a quantity is considered insignificant if it is less than `DEGENERACY_RELATIVE_EPS = 10⁻¹²` of the sum of the
+absolute values of the terms it was obtained from. Unlike an absolute threshold, the criterion does not depend on the scale of the
+interval, and it fires when nodes coincide outside the ends of the grid and for a degenerate
+user-defined system.
 
-## Согласие реализаций BLAS/LAPACK
+## Agreement of the BLAS/LAPACK implementations
 
-Обращение матриц T_k M_k и решение малых систем линейных алгебраических уравнений (СЛАУ) в семействах
-θ, μ и λ выполняются реализацией BLAS/LAPACK, выбранной в `NumericsContext` (системная либо
-переносимая на Java). Наибольшее относительное расхождение между реализациями составляет 5.4·10⁻¹⁶ для
-базиса и 8.2·10⁻¹⁶ для функционалов (`backend-agreement.tsv`, системы B, H, T на равномерной и
-квазиравномерной сетках). Семейства ξ и ξ̃ вычисляются замкнутыми формулами без обращения к
-линейной алгебре, и их результат от реализации не зависит.
+The inversion of the matrices T_k M_k and the solution of the small systems of linear algebraic equations in the families
+θ, μ and λ are performed by the BLAS/LAPACK implementation selected in `NumericsContext` (the system one or the
+portable Java one). The largest relative discrepancy between the implementations is 5.4·10⁻¹⁶ for the
+basis and 8.2·10⁻¹⁶ for the functionals (`backend-agreement.tsv`, the systems B, H, T on the uniform and
+quasi-uniform grids). The families ξ and ξ̃ are computed by closed formulas without resorting to
+linear algebra, and their result does not depend on the implementation.
 
-## Проверка полиномиального случая
+## Verification of the polynomial case
 
-Для системы B минимальные сплайны совпадают с квадратичными B-сплайнами N_{j,2} на той же сетке с
-тройными краевыми узлами. B-сплайны вычисляются в тестах независимо, рекурсией Кокса–де Бура, и
-сравниваются с ω_j на 12 сетках (равномерных, квазиравномерных, геометрических и градуированных):
-наибольшее расхождение значений равно 5.6·10⁻¹⁶, производных — 2.8·10⁻¹⁴ (`deboor-oracle.tsv`).
-Совпадение подтверждает, что аппроксимационное соотношение, локальные координаты и обращение
-матриц воспроизводят классический базис с точностью округления.
+For the system B, minimal splines coincide with the quadratic B-splines N_{j,2} on the same grid with
+triple boundary nodes. The B-splines are computed independently in the tests, by the Cox–de Boor recursion, and are
+compared with ω_j on 12 grids (uniform, quasi-uniform, geometric and graded):
+the largest discrepancy of the values is 5.6·10⁻¹⁶, of the derivatives 2.8·10⁻¹⁴ (`deboor-oracle.tsv`).
+The agreement confirms that the approximation relation, the local coordinates and the matrix inversion
+reproduce the classical basis to rounding accuracy.

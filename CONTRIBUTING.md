@@ -1,61 +1,62 @@
-# Правила изменения minimal-splines
+# Rules for changing minimal-splines
 
-minimal-splines является библиотекой квадратичных минимальных сплайнов и квазиинтерполяции на
-Kotlin/JVM. Ниже изложены правила, которым подчиняются все изменения кода и документации.
+minimal-splines is a library of quadratic minimal splines and quasi-interpolation written in
+Kotlin/JVM. The rules below govern every change to the code and the documentation.
 
-## Язык
+## Language
 
-Документация, KDoc, комментарии, сообщения исключений и сообщения коммитов ведутся на русском
-языке; идентификаторы в коде — на английском. Стиль текста описательный: без выделения
-заглавными буквами, без жаргона, без ссылок на внешние проекты и историю версий.
+KDoc, comments, exception messages, commit messages and all documentation are written in English;
+the only exception is `docs/ABSTRACT.md`, the software-registration abstract, which is kept in
+Russian. Identifiers in the code are English. The style of the text is descriptive: no words in
+capitals, no jargon, no references to external projects or to the version history.
 
-## Публичный API
+## Public API
 
-- Включён режим `explicitApi()`: каждый новый элемент объявляется `internal`. Публичным
-  элемент становится только при наличии KDoc и теста, покрывающего его контракт.
-- Типы numerical-core (`NumericsContext`, `DenseMatrix`) входят в сигнатуры публичного API,
-  поэтому зависимость объявлена в области `api`; иные внешние зависимости в основной код не
-  добавляются.
-- Поведение метода (проверки, исключения, форма результата) не зависит от реализации
-  BLAS/LAPACK.
+- `explicitApi()` is enabled: every new element is declared `internal`. An element becomes public
+  only once it has KDoc and a test covering its contract.
+- numerical-core types (`NumericsContext`, `DenseMatrix`) appear in the signatures of the public API,
+  so the dependency is declared in the `api` scope; no other external dependencies are added to the
+  main source set.
+- The behaviour of a method (checks, exceptions, shape of the result) does not depend on the
+  BLAS/LAPACK implementation.
 
-## Численные методы
+## Numerical methods
 
-- Любая величина порождающей системы на интервале сетки вычисляется только через локальное
-  представление `basis.frame(k).psi`, `psiD`, `psiDD`. Обращение к `sys.rho`, `sys.sigma` и их
-  производным в глобальной переменной t в коде базиса и функционалов не допускается: оно
-  возвращает потерю значимости, зависящую от длины и положения отрезка (обоснование —
-  `docs/ТОЧНОСТЬ.md`, раздел «Локальные координаты интервала»).
-- Каждое семейство функционалов сопровождается тестами биортогональности или точности на
-  `span{1, rho, sigma}`, сверкой с закрытой формулой источника и записью в `docs/ИСТОЧНИКИ.md`.
-- Пороги `MinimalSplineBasis.MAX_CONDITION` и `DEGENERACY_RELATIVE_EPS` изменяются только с
-  обоснованием в `docs/ТОЧНОСТЬ.md`.
-- Эталоны поведения в `src/test/resources/golden` обновляются командой
-  `./gradlew regenerateGolden` только при намеренном изменении поведения, с записью причины в
-  `src/test/resources/golden/README.md`.
-- Контрпример, найденный свойствами jqwik, устраняется исправлением кода; ослабление допуска
-  или сужение генератора не допускается.
+- Any quantity of the generating system on a grid interval is computed only through the local
+  representation `basis.frame(k).psi`, `psiD`, `psiDD`. Accessing `sys.rho`, `sys.sigma` and their
+  derivatives in the global variable t inside the basis and functional code is not allowed: it
+  causes a loss of significance that depends on the length and the position of the interval (the
+  justification is in `docs/ACCURACY.md`, section "Local interval coordinates").
+- Every family of functionals comes with tests of biorthogonality or of exactness on
+  `span{1, rho, sigma}`, with a comparison against the closed formula of the source and with an
+  entry in `docs/REFERENCES.md`.
+- The thresholds `MinimalSplineBasis.MAX_CONDITION` and `DEGENERACY_RELATIVE_EPS` are changed only
+  with a justification in `docs/ACCURACY.md`.
+- The golden references in `src/test/resources/golden` are regenerated with
+  `./gradlew regenerateGolden` only when the behaviour is changed intentionally, with the reason
+  recorded in `src/test/resources/golden/README.md`.
+- A counterexample found by the jqwik properties is eliminated by fixing the code; relaxing a
+  tolerance or narrowing a generator is not allowed.
 
-## Команды
+## Commands
 
-    ./gradlew build                                  # тесты, порог покрытия Kover
-    ./gradlew test -Dnumerics.backend=java           # переносимая реализация на Java
-    ./gradlew test -Dnumerics.backend=native         # системная реализация BLAS/LAPACK
-    ./gradlew benchmark -Pbench.args="100 1000"      # измерения производительности
-    ./gradlew dokkaHtml                              # документация API
+    ./gradlew build                                  # tests, Kover coverage threshold
+    ./gradlew test -Dnumerics.backend=java           # portable Java implementation
+    ./gradlew test -Dnumerics.backend=native         # system BLAS/LAPACK implementation
+    ./gradlew benchmark -Pbench.args="100 1000"      # performance measurements
+    ./gradlew dokkaHtml                              # API documentation
 
-Задача `check` включает проверку порога покрытия Kover; изменение, снижающее покрытие ниже
-порога, не проходит сборку. Все команды выполняются с флагом `--offline`.
+The `check` task includes the Kover coverage threshold check; a change that drops the coverage below
+the threshold fails the build. All commands are run with the `--offline` flag.
 
-Публикация версии: тег `vX.Y.Z` запускает публикацию в GitHub Packages из CI.
+Releasing a version: the tag `vX.Y.Z` triggers publication to GitHub Packages from CI.
 
-## Документация
+## Documentation
 
-После изменения API обновляются `README.md` и соответствующий документ в `docs/`. Числа в
-`docs/ТОЧНОСТЬ.md` получаются из отчётов `build/reports/*.tsv`, формируемых задачей `test`.
+After an API change, `README.md` and the corresponding document in `docs/` are updated. The numbers in
+`docs/ACCURACY.md` are taken from the reports `build/reports/*.tsv` produced by the `test` task.
 
-## Коммиты
+## Commits
 
-Сообщения коммитов составляются на русском языке с префиксом области: `api:`, `algo:`,
-`test:`, `docs:`, `build:`. Одному изменению соответствует один коммит; сообщение описывает,
-что изменилось и по какой причине.
+Commit messages are written in English with an area prefix: `api:`, `algo:`, `test:`, `docs:`,
+`build:`. One change corresponds to one commit; the message describes what changed and why.

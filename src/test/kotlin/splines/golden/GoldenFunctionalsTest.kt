@@ -13,9 +13,10 @@ import splines.golden.GoldenIo.section
 import kotlin.test.assertEquals
 
 /**
- * functionals.json: коэффициенты проекторов, cChi, closedFormInternal — относительно
- * [GoldenCompare.BASIS_TOLERANCE] (семейства решают малые СЛАУ реализацией BLAS/LAPACK, эталон 0.1.0
- * получен по формулам Крамера, см. обоснование допуска); флаги и классы исключений — точно.
+ * functionals.json: projector coefficients, cChi, closedFormInternal — compared against
+ * [GoldenCompare.BASIS_TOLERANCE] (the families solve small linear systems through a BLAS/LAPACK
+ * implementation, while the 0.1.0 golden reference was produced with Cramer's rule, see the justification
+ * of the tolerance); flags and exception classes — exactly.
  */
 @Tag("fast")
 class GoldenFunctionalsTest {
@@ -35,7 +36,7 @@ class GoldenFunctionalsTest {
                 }
             }
         }
-        return cases + dynamicTest("набор случаев") {
+        return cases + dynamicTest("case set") {
             assertEquals(inputs.keys, exp.keys)
             for (key in exp.keys) assertEquals(GoldenCompute.familyKeys.toSet(), obj(exp[key]).keys, key)
         }

@@ -8,32 +8,32 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.fail
 
-/** Рекурсивное сравнение деревьев эталона и повторного вычисления. */
+/** Recursive comparison of the golden reference tree against a recomputed one. */
 object GoldenCompare {
     enum class Mode { BITS, REL }
 
     const val REL_TOL = 1e-12
 
     /**
-     * Относительный допуск для наборов `basis` и `functionals`.
+     * Relative tolerance for the `basis` and `functionals` sets.
      *
-     * Эталоны 0.1.0 получены обращением M_k по формулам Крамера в глобальных координатах
-     * порождающей системы при числах обусловленности до ~10⁴ (сетки с n ≤ 32, включая
-     * градуированные с мелкими интервалами); погрешность такого пути — порядка cond·ε ≈ 10⁻¹²…10⁻¹¹,
-     * что и наблюдается при сравнении с LAPACK (макс. 1.05·10⁻¹¹). Допуск 10⁻¹⁰ покрывает
-     * погрешность эталона с десятикратным запасом и при этом на порядки меньше любой
-     * погрешности метода.
+     * The 0.1.0 golden references were produced by inverting M_k with Cramer's rule in the global
+     * coordinates of the generating system, at condition numbers up to ~10⁴ (grids with n ≤ 32,
+     * including graded ones with small intervals); the error of that path is of order cond·ε ≈ 10⁻¹²…10⁻¹¹,
+     * which is exactly what the comparison with LAPACK shows (max. 1.05·10⁻¹¹). A tolerance of 10⁻¹⁰ covers
+     * the golden reference error with a tenfold margin while still being orders of magnitude smaller than
+     * any method error.
      */
     const val BASIS_TOLERANCE = 1e-10
 
     /**
-     * Относительный допуск для величин, вычисляемых через `Math.sin`, `Math.cos`, `Math.pow`
-     * (порождающая система T, сетки `quasiUniform` и `geometric`): HotSpot использует
-     * платформенные интринсики, результаты которых на x86_64 и aarch64 различаются в младшем
-     * бите. В сетке `geometric` расхождение в одну единицу младшего разряда у q = R^{1/(n-1)}
-     * переносится на q^j с множителем j ≤ n, а расхождения отдельных степеней складываются:
-     * при n = 32 это до ~7 единиц младшего разряда единицы. Допуск в 16 единиц младшего
-     * разряда покрывает это различие с запасом и исключает любое расхождение алгоритма.
+     * Relative tolerance for quantities computed through `Math.sin`, `Math.cos`, `Math.pow`
+     * (generating system T, grids `quasiUniform` and `geometric`): HotSpot uses
+     * platform intrinsics whose results differ in the last bit between x86_64 and aarch64.
+     * In the `geometric` grid a one-ulp discrepancy in q = R^{1/(n-1)} is carried over to q^j with a
+     * factor of j ≤ n, and the discrepancies of the individual powers accumulate:
+     * at n = 32 this amounts to ~7 ulps of unity. A tolerance of 16 ulps
+     * covers this difference with a margin and rules out any algorithmic discrepancy.
      */
     val TRANSCENDENTAL_TOLERANCE: Double = 16 * Math.ulp(1.0)
 
@@ -43,13 +43,13 @@ object GoldenCompare {
         when (expected) {
             null -> assertNull(got, label)
             is Map<*, *> -> {
-                val g = got as? Map<*, *> ?: fail("$label: ожидался объект, получено $got")
-                assertEquals(expected.keys.map { it.toString() }.toSet(), g.keys.map { it.toString() }.toSet(), "$label: набор ключей")
+                val g = got as? Map<*, *> ?: fail("$label: expected an object, got $got")
+                assertEquals(expected.keys.map { it.toString() }.toSet(), g.keys.map { it.toString() }.toSet(), "$label: key set")
                 for ((k, v) in expected) compare(v, g[k], "$label.$k", mode, tol)
             }
             is List<*> -> {
-                val g = got as? List<*> ?: fail("$label: ожидался список, получено $got")
-                assertEquals(expected.size, g.size, "$label: размер")
+                val g = got as? List<*> ?: fail("$label: expected a list, got $got")
+                assertEquals(expected.size, g.size, "$label: size")
                 val hexList = expected.isNotEmpty() && expected.all { it is String && isHex(it) } &&
                     g.all { it is String && isHex(it) }
                 if (hexList) {

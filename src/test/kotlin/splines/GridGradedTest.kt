@@ -7,10 +7,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Тесты градуированной двухмасштабной сетки Grid.graded: концы a,b точны и тройные;
- * строгая монотонность; отношение соседних шагов h_j/h_{j-1} in {ratio, 1/ratio} при
- * ЛЮБОМ n (локальный параметр квазиравномерности = ratio, НЕ стремится к 1 при росте n,
- * в отличие от geometric); h = max шаг. Проверяются чётное и нечётное n.
+ * Tests for the graded two-scale grid Grid.graded: the endpoints a,b are exact and triple;
+ * strict monotonicity; the ratio of neighbouring steps h_j/h_{j-1} in {ratio, 1/ratio} for
+ * ANY n (the local quasi-uniformity parameter = ratio, it does NOT tend to 1 as n grows,
+ * unlike geometric); h = max step. Both even and odd n are checked.
  */
 @Tag("fast")
 class GridGradedTest {
@@ -46,7 +46,7 @@ class GridGradedTest {
         }
     }
 
-    /** Локальный параметр квазиравномерности = ratio, НЕ зависит от n (не стремится к 1). */
+    /** The local quasi-uniformity parameter = ratio; it does NOT depend on n (does not tend to 1). */
     @Test fun quasiUniformityParamFixedIndependentOfN() {
         val ratio = 2.0
         fun maxNeighborRatio(n: Int): Double {
@@ -62,7 +62,7 @@ class GridGradedTest {
         val m64 = maxNeighborRatio(64)
         assertEquals(ratio, m8, 1e-9)
         assertEquals(ratio, m64, 1e-9)
-        // Явно: параметр НЕ падает к 1 при росте n (контраст с geometric mu_n=R^{1/(n-1)}).
+        // Explicitly: the parameter does NOT drop to 1 as n grows (contrast with geometric mu_n=R^{1/(n-1)}).
         assertTrue(kotlin.math.abs(m64 - m8) < 1e-9, "quasi-uniformity param drifted with n")
     }
 
