@@ -193,5 +193,85 @@ public class Grid(public val n: Int, interior: DoubleArray) {
             interior[n] = b // guards against accumulated round-off error at the right end
             return Grid(n, interior)
         }
+
+        /**
+         * Power-graded grid refined towards a:
+         *   x_j = a + (b - a) (j/n)^r,  j = 0..n,  r >= 1,
+         * with x_0 = a and x_n = b set exactly; the triple end knots are added by [Grid].
+         *
+         * The steps h_j = x_{j+1} - x_j increase with j, and the local quasi-uniformity parameter is
+         * max_{1 <= j <= n-1} h_j/h_{j-1} = h_1/h_0 = 2^r - 1, independent of n (the maximum over the
+         * interior nodes is attained at j = 1). For r = 1 the grid is the uniform one.
+         *
+         * Every node is computed from its own index as (j/n)^r, without accumulating steps, so rounding
+         * errors do not drift along the grid.
+         *
+         * @param n number of interior intervals (>= 1).
+         * @param r grading exponent (finite, >= 1).
+         * @throws IllegalArgumentException if n < 1, r < 1 or r is not finite, a or b is not finite or
+         *   a >= b, or x_1 - x_0 <= 4 [breakpointInclusionEps] (the first step would be indistinguishable
+         *   from a breakpoint coincidence).
+         */
+        public fun power(n: Int, a: Double = 0.0, b: Double = 1.0, r: Double): Grid {
+            require(n >= 1) { "power: n must be >= 1, got n=$n" }
+            requireGradingArgs("power", a, b, r)
+            val interior = DoubleArray(n + 1) { j ->
+                when (j) {
+                    0 -> a
+                    n -> b
+                    else -> a + (b - a) * Math.pow(j.toDouble() / n, r)
+                }
+            }
+            requireEndStep("power", n, r, a, b, interior[1] - interior[0])
+            return Grid(n, interior)
+        }
+
+        /**
+         * Mirror-symmetric power-graded grid refined towards both ends; n = 2m is even. The left half is
+         * the power law towards a with half the interval,
+         *   x_j = a + ((b - a)/2) (j/m)^r,  j = 0..m,
+         * the middle node is x_m = (a + b)/2 exactly, and the right half is mirrored:
+         * x_{n-j} = a + b - x_j. The local quasi-uniformity parameter equals that of [power]:
+         * max_j max(h_j/h_{j-1}, h_{j-1}/h_j) = 2^r - 1, attained at j = 1 and j = n - 1.
+         * In floating point the steps near b are differences of nodes of magnitude |b|, so their ratios
+         * carry a relative rounding error of order ulp(b)/h_0, h_0 = x_1 - x_0.
+         *
+         * @param n number of interior intervals (even, >= 2).
+         * @param r grading exponent (finite, >= 1).
+         * @throws IllegalArgumentException if n is odd or n < 2, r < 1 or r is not finite, a or b is not
+         *   finite or a >= b, or the first or the last step does not exceed 4 [breakpointInclusionEps].
+         */
+        public fun symmetricPower(n: Int, a: Double = 0.0, b: Double = 1.0, r: Double): Grid {
+            require(n >= 2 && n % 2 == 0) { "symmetricPower: n must be even and >= 2, got n=$n" }
+            requireGradingArgs("symmetricPower", a, b, r)
+            val m = n / 2
+            val half = (b - a) / 2
+            val sum = a + b
+            val interior = DoubleArray(n + 1)
+            interior[0] = a
+            for (j in 1 until m) interior[j] = a + half * Math.pow(j.toDouble() / m, r)
+            interior[m] = sum / 2
+            for (j in 1 until m) interior[n - j] = sum - interior[j]
+            interior[n] = b
+            requireEndStep("symmetricPower", n, r, a, b, interior[1] - interior[0])
+            requireEndStep("symmetricPower", n, r, a, b, interior[n] - interior[n - 1])
+            return Grid(n, interior)
+        }
+
+        private fun requireGradingArgs(name: String, a: Double, b: Double, r: Double) {
+            require(r.isFinite() && r >= 1.0) { "$name: r must be finite and >= 1, got r=$r" }
+            require(a.isFinite() && b.isFinite() && a < b) {
+                "$name: a and b must be finite with a < b, got a=$a, b=$b"
+            }
+        }
+
+        /** Rejects an end step that the breakpoint tolerance of the grid could not tell from a coincidence. */
+        private fun requireEndStep(name: String, n: Int, r: Double, a: Double, b: Double, step: Double) {
+            val eps = BREAKPOINT_INCLUSION_EPS_UNIT * maxOf(1.0, kotlin.math.abs(b - a))
+            require(step > 4.0 * eps) {
+                "$name: end step $step for n=$n, r=$r does not exceed 4*breakpointInclusionEps=${4.0 * eps}; " +
+                    "it would be indistinguishable from a breakpoint coincidence (decrease n or r)"
+            }
+        }
     }
 }
