@@ -341,8 +341,9 @@ public class SecondDerivFunctional(public val node: Double, public val c1: Doubl
  *
  * @property r order of the functional, one of {0, 1, 2}; r = 1 by default.
  * @param ctx numerical computation context (the family does not use linear algebra).
- * @throws IllegalArgumentException if r is outside {0, 1, 2}, or if on some interval the Wronskian
- *   or the denominator Delta_j is degenerate (see [splines.DEGENERACY_RELATIVE_EPS]).
+ * @throws IllegalArgumentException if r is outside {0, 1, 2}, if the generating system is
+ *   reparametrized ([splines.GeneratingSystem.reparametrization] is not null), or if on some interval
+ *   the Wronskian or the denominator Delta_j is degenerate (see [splines.DEGENERACY_RELATIVE_EPS]).
  */
 public class DeBoorFixFunctionals(
     basis: MinimalSplineBasis,
@@ -350,6 +351,14 @@ public class DeBoorFixFunctionals(
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, if (r == 1) "xi" else "xi<$r>", ctx) {
     init { require(r in 0..2) { "DeBoorFix: parameter r must be 0, 1 or 2, got $r" } }
+    init {
+        // The coefficients are built from psiD (and psiDD for r = 0) of the local frames; for a
+        // reparametrized system psiD = tangent * g'(t) is infinite at the endpoint where g' = +inf.
+        require(basis.sys.reparametrization == null) {
+            "de Boor–Fix functionals use t-derivatives of the generating system, which are infinite " +
+                "at the endpoint for a reparametrized system ${basis.sys.name}"
+        }
+    }
     override val isProjector: Boolean = true
     override val usesDerivative: Boolean = true
     override val usesSecondDerivative: Boolean = (r == 0)
@@ -510,7 +519,8 @@ public class DeBoorFixFunctionals(
  *
  * @property r order of the functional, one of {1, 2}; r = 1 by default.
  * @param ctx numerical computation context; passed to the nested [DeBoorFixFunctionals] family.
- * @throws IllegalArgumentException if r is outside {1, 2} or the nested xi family cannot be built.
+ * @throws IllegalArgumentException if r is outside {1, 2}, if the generating system is reparametrized,
+ *   or the nested xi family cannot be built.
  */
 public class DiscreteDeBoorFixFunctionals(
     basis: MinimalSplineBasis,
@@ -518,6 +528,14 @@ public class DiscreteDeBoorFixFunctionals(
     ctx: NumericsContext = NumericsContext.default(),
 ) : FunctionalFamily(basis, if (r == 1) "xitilde" else "xitilde<$r>", ctx) {
     init { require(r in 1..2) { "DiscreteDeBoorFix: parameter r must be 1 or 2, got $r" } }
+    init {
+        // The derivative factors A^{<r>}_j are taken from the nested xi family, which is built from
+        // psiD of the local frames; reject a reparametrized system before building it.
+        require(basis.sys.reparametrization == null) {
+            "de Boor–Fix functionals use t-derivatives of the generating system, which are infinite " +
+                "at the endpoint for a reparametrized system ${basis.sys.name}"
+        }
+    }
     override val isProjector: Boolean = false
     override val usesDerivative: Boolean = false
     // The context is passed to the nested family so that `raw.ctx` matches the context of the wrapper.
