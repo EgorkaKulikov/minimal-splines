@@ -66,7 +66,7 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
     internal fun localApproximationMatrix(k: Int): DenseMatrix {
         val frame = frames[k]
         requireFiniteFrame(k, frame)
-        val cols = Array(3) { j -> computeA(k - 2 + j, frame.psi, frame.psiD) }
+        val cols = Array(3) { j -> computeA(k - 2 + j, frame.psi, frame.tangent) }
         return DenseMatrix.build(3, 3) { i, j -> cols[j][i] }
     }
 
@@ -81,7 +81,7 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
     private fun requireFiniteFrame(k: Int, frame: LocalFrame) {
         for (m in k - 1..k + 2) {
             val x = grid.x(m)
-            require(allFinite(frame.psi(x)) && allFinite(frame.psiD(x))) {
+            require(allFinite(frame.psi(x)) && allFinite(frame.tangent(x))) {
                 "Generating system ${sys.name} overflows on interval $k = [${grid.x(k)}, ${grid.x(k + 1)}]: " +
                     "the values of psi_k or psi_k' at the node x_$m = $x are non-finite; reduce the grid step or the length of the interval"
             }
@@ -127,6 +127,9 @@ public class MinimalSplineBasis(public val sys: GeneratingSystem, public val gri
      * a_j = phi(x_{j+1}) - coef phi'(x_{j+1}). The coefficient coef is the ratio of the dot products
      * with the common normal phi(x_{j+2}) × phi'(x_{j+2}), so under the substitution phi -> T phi the
      * vector turns into T a_j; this allows the columns of T_k M_k to be computed by the same formula.
+     * The result does not change when [phiD] is multiplied by a finite non-vanishing scalar function
+     * (the factors cancel in coef phi'(x_{j+1})), so any vector proportional to phi' may be passed
+     * (see [LocalFrame.tangent]).
      */
     internal fun computeA(j: Int, phi: (Double) -> DoubleArray, phiD: (Double) -> DoubleArray): DoubleArray {
         val xj1 = grid.x(j + 1)

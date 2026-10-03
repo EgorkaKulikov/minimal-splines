@@ -570,7 +570,7 @@ public class AveragingFunctionals(
         val frame = basis.frame(j + 1)
         val cols = Array(3) { q -> frame.psi(ys[q]) }
         val matrix = DenseMatrix.build(3, 3) { r, c -> cols[c][r] }
-        val coeff = LinearAlgebra.solve(matrix, basis.computeA(j, frame.psi, frame.psiD), ctx.backend)
+        val coeff = LinearAlgebra.solve(matrix, basis.computeA(j, frame.psi, frame.tangent), ctx.backend)
         return ValueFunctional(ys, coeff)
     }
 }

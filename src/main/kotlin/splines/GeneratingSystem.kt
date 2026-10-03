@@ -26,13 +26,32 @@ import kotlin.math.sinh
  * @property psiD its derivative psi'(t) = T phi'(t);
  * @property psiDD the second derivative psi''(t) = T phi''(t);
  * @property det determinant of the matrix T.
+ * @property tangent vector proportional to [psiD] with a finite non-vanishing factor; used only to
+ * build the approximation-relation vectors a_j, which are invariant to that factor (see
+ * MinimalSplineBasis.computeA). Equals psiD for the built-in systems B, H, T.
  */
 public class LocalFrame(
     public val psi: (Double) -> DoubleArray,
     public val psiD: (Double) -> DoubleArray,
     public val psiDD: (Double) -> DoubleArray,
     public val det: Double,
-)
+    public val tangent: (Double) -> DoubleArray,
+) {
+    /**
+     * Local representation whose [tangent] is [psiD] itself (the same function reference).
+     *
+     * @param psi local vector function psi(t) = T phi(t).
+     * @param psiD its derivative psi'(t) = T phi'(t).
+     * @param psiDD the second derivative psi''(t) = T phi''(t).
+     * @param det determinant of the matrix T.
+     */
+    public constructor(
+        psi: (Double) -> DoubleArray,
+        psiD: (Double) -> DoubleArray,
+        psiDD: (Double) -> DoubleArray,
+        det: Double,
+    ) : this(psi, psiD, psiDD, det, psiD)
+}
 
 /**
  * Generating vector function phi(t) = (1, rho(t), sigma(t))^T and its derivatives up to the second
