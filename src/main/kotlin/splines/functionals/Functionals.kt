@@ -8,6 +8,7 @@ import numerics.NumericsContext
 import splines.DEGENERACY_RELATIVE_EPS
 import splines.Grid
 import splines.MinimalSplineBasis
+import splines.Reparametrization
 import splines.cancellationScale
 import splines.isSignificant
 
@@ -135,6 +136,32 @@ public class ValueFunctional(public val nodes: DoubleArray, public val coeffs: D
 }
 
 /**
+ * Rule that places the interior sampling point of a grid cell [l, r] for the projection-type
+ * functionals theta ([ProjFunctionals]).
+ */
+public fun interface ThetaSampling {
+    /** Sampling point inside the cell [l, r], l < r. */
+    public fun midpoint(l: Double, r: Double): Double
+
+    /** Built-in rules. */
+    public companion object {
+        /** Arithmetic midpoint (l + r)/2 — the classical choice. */
+        public val ARITHMETIC: ThetaSampling = ThetaSampling { l, r -> 0.5 * (l + r) }
+
+        /**
+         * Midpoint in the parameter tau = g(t): g^{-1}(g(l) + (g(r) − g(l))/2), with the difference
+         * computed by [Reparametrization.difference] (no cancellation). With this rule theta on the
+         * basis of `GeneratingSystem.reparametrized(rep)` coincides with theta for quadratic
+         * B-splines in tau.
+         *
+         * @param rep the map g.
+         */
+        public fun reparametrized(rep: Reparametrization): ThetaSampling =
+            ThetaSampling { l, r -> rep.gInverse(rep.g(l) + 0.5 * rep.difference(r, l)) }
+    }
+}
+
+/**
  * Family of projection functionals theta_j.
  *
  * The internal and boundary functionals are built by local biorthogonalization: the system
@@ -146,12 +173,23 @@ public class ValueFunctional(public val nodes: DoubleArray, public val coeffs: D
  * P_theta^2 = P_theta. The boundary functionals (j = -2 and j = n-1) are the values f(x_0) and
  * f(x_n) according to the definition in the source.
  *
+ * The interior sampling points of the functionals (one per grid cell [l, r]) are placed by
+ * [sampling]; the family name is "theta" for [ThetaSampling.ARITHMETIC] and "theta-tau" otherwise.
+ *
  * @param ctx numerical computation context for the linear systems of the local biorthogonalization.
  */
 public class ProjFunctionals(
     basis: MinimalSplineBasis,
-    ctx: NumericsContext = NumericsContext.default(),
-) : FunctionalFamily(basis, "theta", ctx) {
+    ctx: NumericsContext,
+    /** Rule that places the interior sampling points (cell midpoints) of the functionals. */
+    public val sampling: ThetaSampling,
+) : FunctionalFamily(basis, if (sampling === ThetaSampling.ARITHMETIC) "theta" else "theta-tau", ctx) {
+    /** Classical family with the arithmetic midpoints ([ThetaSampling.ARITHMETIC]). */
+    public constructor(
+        basis: MinimalSplineBasis,
+        ctx: NumericsContext = NumericsContext.default(),
+    ) : this(basis, ctx, ThetaSampling.ARITHMETIC)
+
     override val isProjector: Boolean = true
     override val usesDerivative: Boolean = false
     private val funcs: Array<ApproxFunctional> = Array(n + 2) { buildTheta(it - 2) }
@@ -164,14 +202,16 @@ public class ProjFunctionals(
         val xnm1 = grid.x(n - 1); val xn = grid.x(n)
         return when (j) {
             -2 -> ValueFunctional(doubleArrayOf(x0), doubleArrayOf(1.0))
-            -1 -> localFunctional(j = -1, points = doubleArrayOf(x0, mid(x0, x1), x1), indices = intArrayOf(-2, -1, 0))
+            -1 -> localFunctional(j = -1, points = doubleArrayOf(x0, sampling.midpoint(x0, x1), x1), indices = intArrayOf(-2, -1, 0))
             n - 1 -> ValueFunctional(doubleArrayOf(xn), doubleArrayOf(1.0))
-            n - 2 -> localFunctional(j = n - 2, points = doubleArrayOf(xnm1, mid(xnm1, xn), xn), indices = intArrayOf(n - 3, n - 2, n - 1))
+            n - 2 -> localFunctional(j = n - 2, points = doubleArrayOf(xnm1, sampling.midpoint(xnm1, xn), xn), indices = intArrayOf(n - 3, n - 2, n - 1))
             else -> {
                 val xj = grid.x(j); val xj1 = grid.x(j + 1); val xj2 = grid.x(j + 2); val xj3 = grid.x(j + 3)
                 localFunctional(
                     j = j,
-                    points = doubleArrayOf(xj, mid(xj, xj1), mid(xj1, xj2), mid(xj2, xj3), xj3),
+                    points = doubleArrayOf(
+                        xj, sampling.midpoint(xj, xj1), sampling.midpoint(xj1, xj2), sampling.midpoint(xj2, xj3), xj3,
+                    ),
                     indices = intArrayOf(j - 2, j - 1, j, j + 1, j + 2),
                 )
             }
