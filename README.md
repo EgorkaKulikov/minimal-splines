@@ -51,6 +51,9 @@ maven {
 }
 ```
 
+Example of a reparametrized system on a power-graded grid:
+`MinimalSplineBasis(GeneratingSystem.reparametrized(Reparametrization.power(0.5)), Grid.power(64, r = 2.0))`.
+
 ## Documentation
 
 The problem statement, evaluation in local interval coordinates, the measured convergence orders and the limits of
