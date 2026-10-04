@@ -29,7 +29,7 @@ and from the works of A. A. Makarov and E. K. Kulikov; the list of sources linke
 
 ## Usage
 
-JDK 21 or newer is required. The dependency `io.github.egorkakulikov:minimal-splines:1.1.0` is published to GitHub Packages;
+JDK 21 or newer is required. The dependency `io.github.egorkakulikov:minimal-splines:1.2.0` is published to GitHub Packages;
 linear algebra is performed by the `io.github.egorkakulikov:numerical-core` library, which is resolved transitively from
 its own repository. Reading both repositories requires a token with the `read:packages` scope (`gpr.user` and `gpr.token`
 in `~/.gradle/gradle.properties`, or the corresponding environment variables):
