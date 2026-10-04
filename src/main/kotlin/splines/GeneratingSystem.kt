@@ -26,13 +26,32 @@ import kotlin.math.sinh
  * @property psiD its derivative psi'(t) = T phi'(t);
  * @property psiDD the second derivative psi''(t) = T phi''(t);
  * @property det determinant of the matrix T.
+ * @property tangent vector proportional to [psiD] with a finite non-vanishing factor; used only to
+ * build the approximation-relation vectors a_j, which are invariant to that factor (see
+ * MinimalSplineBasis.computeA). Equals psiD for the built-in systems B, H, T.
  */
 public class LocalFrame(
     public val psi: (Double) -> DoubleArray,
     public val psiD: (Double) -> DoubleArray,
     public val psiDD: (Double) -> DoubleArray,
     public val det: Double,
-)
+    public val tangent: (Double) -> DoubleArray,
+) {
+    /**
+     * Local representation whose [tangent] is [psiD] itself (the same function reference).
+     *
+     * @param psi local vector function psi(t) = T phi(t).
+     * @param psiD its derivative psi'(t) = T phi'(t).
+     * @param psiDD the second derivative psi''(t) = T phi''(t).
+     * @param det determinant of the matrix T.
+     */
+    public constructor(
+        psi: (Double) -> DoubleArray,
+        psiD: (Double) -> DoubleArray,
+        psiDD: (Double) -> DoubleArray,
+        det: Double,
+    ) : this(psi, psiD, psiDD, det, psiD)
+}
 
 /**
  * Generating vector function phi(t) = (1, rho(t), sigma(t))^T and its derivatives up to the second
@@ -49,8 +68,10 @@ public class LocalFrame(
  * @property sigmaD derivative sigma'(t).
  * @property rhoDD second derivative rho''(t).
  * @property sigmaDD second derivative sigma''(t).
+ * @property reparametrization the map g of a reparametrized system (1, g, g^2) built by
+ * [reparametrized]; null for [B], [H], [T] and for systems created by the public constructor.
  */
-public class GeneratingSystem(
+public class GeneratingSystem private constructor(
     public val name: String,
     public val rho: (Double) -> Double,
     public val sigma: (Double) -> Double,
@@ -58,8 +79,33 @@ public class GeneratingSystem(
     public val sigmaD: (Double) -> Double,
     public val rhoDD: (Double) -> Double,
     public val sigmaDD: (Double) -> Double,
-    private val localFrameFactory: ((c: Double, h: Double) -> LocalFrame)? = null,
+    private val localFrameFactory: ((c: Double, h: Double) -> LocalFrame)?,
+    public val reparametrization: Reparametrization?,
 ) {
+    /**
+     * Generating system phi(t) = (1, rho(t), sigma(t)) with an optional local representation.
+     *
+     * @param name short name of the system.
+     * @param rho second component rho(t).
+     * @param sigma third component sigma(t).
+     * @param rhoD derivative rho'(t).
+     * @param sigmaD derivative sigma'(t).
+     * @param rhoDD second derivative rho''(t).
+     * @param sigmaDD second derivative sigma''(t).
+     * @param localFrameFactory local representation of the system on an interval [c, c + h]
+     * (see [localFrame]); null means the global coordinates.
+     */
+    public constructor(
+        name: String,
+        rho: (Double) -> Double,
+        sigma: (Double) -> Double,
+        rhoD: (Double) -> Double,
+        sigmaD: (Double) -> Double,
+        rhoDD: (Double) -> Double,
+        sigmaDD: (Double) -> Double,
+        localFrameFactory: ((c: Double, h: Double) -> LocalFrame)? = null,
+    ) : this(name, rho, sigma, rhoD, sigmaD, rhoDD, sigmaDD, localFrameFactory, null)
+
     /** phi(t) = (1, rho(t), sigma(t)). */
     public fun phi(t: Double): DoubleArray = doubleArrayOf(1.0, rho(t), sigma(t))
 
@@ -117,7 +163,60 @@ public class GeneratingSystem(
             rhoDD = { t -> -Math.sin(t) }, sigmaDD = { t -> -Math.cos(t) },
             localFrameFactory = ::trigonometricFrame,
         )
+
+        /**
+         * Reparametrized system phi(t) = (1, g(t), g(t)^2) for a strictly increasing map g = [rep]
+         * (named "G[" + rep.name + "]"). Its minimal splines are omega_j = B_j ∘ g, where B_j are the
+         * quadratic B-splines on the knots g(x_j).
+         *
+         * The basis and the functionals use only the local representation (see [LocalFrame]), built
+         * from [Reparametrization.difference] and finite at a point where g' = +∞. The global
+         * components rho = g, sigma = g^2 and their derivatives rhoD = g', sigmaD = 2 g g',
+         * rhoDD = g'', sigmaDD = 2 g'^2 + 2 g g'' serve only [phi], [phiD], [phiDD] and [wronskian];
+         * they may be infinite at the left end a where g'(a) = +∞.
+         *
+         * @param rep the map g.
+         */
+        public fun reparametrized(rep: Reparametrization): GeneratingSystem = GeneratingSystem(
+            name = "G[" + rep.name + "]",
+            rho = rep.g,
+            sigma = { t -> val v = rep.g(t); v * v },
+            rhoD = rep.gD,
+            sigmaD = { t -> 2.0 * rep.g(t) * rep.gD(t) },
+            rhoDD = rep.gDD,
+            sigmaDD = { t -> val d = rep.gD(t); 2.0 * d * d + 2.0 * rep.g(t) * rep.gDD(t) },
+            localFrameFactory = { c, h -> reparametrizedFrame(rep, c, h) },
+            reparametrization = rep,
+        )
     }
+}
+
+/**
+ * Local representation of the system (1, g, g^2) on [c, c + h]: psi(t) = (1, d, d^2) with
+ * d(t) = (g(t) - g(c))/Delta, Delta = g(c + h) - g(c); the differences are computed by
+ * [Reparametrization.difference]. The matrix T has rows (1, 0, 0), (-g(c)/Delta, 1/Delta, 0),
+ * (g(c)^2/Delta^2, -2 g(c)/Delta^2, 1/Delta^2); det T = 1/Delta^3.
+ *
+ * The tangent (0, 1/Delta, 2d/Delta) is the derivative of psi with respect to g and stays finite where
+ * g' = +∞; psiD = tangent · g'(t) is the true derivative with respect to t and is non-finite at such a
+ * point (so are psiDD and the derivatives omega_j' and omega_j'' built from them).
+ */
+private fun reparametrizedFrame(rep: Reparametrization, c: Double, h: Double): LocalFrame {
+    val delta = rep.difference(c + h, c)
+    val iDelta = 1.0 / delta
+    val d = { t: Double -> rep.difference(t, c) * iDelta }
+    val tangent = { t: Double -> doubleArrayOf(0.0, iDelta, 2.0 * d(t) * iDelta) }
+    return LocalFrame(
+        psi = { t -> val s = d(t); doubleArrayOf(1.0, s, s * s) },
+        psiD = { t -> val gd = rep.gD(t); doubleArrayOf(0.0, gd * iDelta, 2.0 * d(t) * gd * iDelta) },
+        psiDD = { t ->
+            val gd = rep.gD(t)
+            val gdd = rep.gDD(t)
+            doubleArrayOf(0.0, gdd * iDelta, 2.0 * gd * gd * iDelta * iDelta + 2.0 * d(t) * gdd * iDelta)
+        },
+        det = iDelta * iDelta * iDelta,
+        tangent = tangent,
+    )
 }
 
 /**

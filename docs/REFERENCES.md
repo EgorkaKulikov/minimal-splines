@@ -24,6 +24,9 @@ and the status of the construction.
 | Coincidence with quadratic B-splines for the system B; Cox–de Boor recursion in the tests | `src/test/kotlin/splines/DeBoorOracleTest.kt` | Classical |
 | Local interval coordinates ψ_k = T_k φ; covariance a_j^{Tφ} = T a_j^{φ} | `LocalFrame`, `GeneratingSystem.localFrame`, `MinimalSplineBasis.localApproximationMatrix` | Original work |
 | Degeneracy criterion based on the condition number of T_k M_k, and the relative significance threshold for the denominators | `MinimalSplineBasis.MAX_CONDITION`, `DEGENERACY_RELATIVE_EPS`, `nonDegenerate` | Original work |
+| Tangent vector of the local frame: the vectors a_j are built from it and do not depend on a scalar factor of φ' | `LocalFrame.tangent`, `MinimalSplineBasis.computeA` | Original work |
+| Reparametrized system φ = (1, g, g²): ω_j = B_j ∘ g, where B_j are the quadratic B-splines on the knots g(x_j); established symbolically and verified by `ReparametrizedSystemTest` | `Reparametrization`, `Reparametrization.power`, `GeneratingSystem.reparametrized` | Original work |
+| Power-graded grid x_j = a + (b − a)(j/n)^r (H. Brunner, The numerical solution of weakly singular Volterra integral equations by collocation on graded meshes, Math. Comp. 45 (1985), no. 172, 417–437, doi:10.1090/S0025-5718-1985-0804933-3); the symmetric variant applies the same law on each half of the interval | `Grid.power`, `Grid.symmetricPower` | Classical |
 
 ## 2. Approximation functionals
 
@@ -37,6 +40,7 @@ and the status of the construction.
 | Averaging functionals μ_j from the values at the points of the auxiliary grid y_j = x_{j+1} + θ (x_{j+2} − x_{j+1}) | `AveragingFunctionals` | Classical |
 | Three-point functionals λ_j from the values at x_{j+1}, x_{j+3/2}, x_{j+2} | `ThreePointFunctionals` | Classical |
 | Evaluation of the coefficients of the functionals through the local representation ψ_k instead of φ | `FunctionalFamily` and its subclasses | Original work |
+| Placement of the midpoints of θ_j by a sampling rule: arithmetic (l + r)/2, or g⁻¹((g(l) + g(r))/2) for a reparametrized system | `ThetaSampling`, `ThetaSampling.ARITHMETIC`, `ThetaSampling.reparametrized`, `ProjFunctionals` | Original work |
 
 ## 3. Metrics
 

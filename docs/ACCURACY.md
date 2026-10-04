@@ -154,3 +154,32 @@ compared with ω_j on 12 grids (uniform, quasi-uniform, geometric and graded):
 the largest discrepancy of the values is 5.6·10⁻¹⁶, of the derivatives 2.8·10⁻¹⁴ (`deboor-oracle.tsv`).
 The agreement confirms that the approximation relation, the local coordinates and the matrix inversion
 reproduce the classical basis to rounding accuracy.
+
+## Reparametrized systems and power-graded grids
+
+For the system φ = (1, g, g²), g(t) = (t − a)^β, the minimal splines are ω_j = B_j ∘ g, where B_j are the
+quadratic B-splines on the knots g(x_j). The tests compare ω_j with an independent Cox–de Boor evaluation of
+B_j ∘ g for β ∈ {1/2, 2/3, 1/3} on uniform and geometric grids, n ∈ {8, 16, 64}: the largest discrepancy is
+1.6·10⁻¹⁴; at β = 1 the basis agrees with that of the system B to 2.7·10⁻¹⁵; the partition of unity holds to
+4.4·10⁻¹⁶; the condition number of T_k M_k does not exceed 15.6 (`ReparametrizedSystemTest`).
+
+The local frame of the system is written in the differences d = g(t) − g(c), so its tangent vector is finite,
+whereas ψ' = tangent · g'(t) is infinite at t = a for β < 1. The vectors a_j are built from the tangent vector
+and do not depend on its scale: multiplying it by a positive function changes a_j by at most 8.4·10⁻¹⁶ and
+ω_j by at most 8.9·10⁻¹⁶ for the systems B, H, T (`LocalFrameTangentTest`).
+
+The functionals θ are biorthogonal on the reparametrized system to 4.4·10⁻¹⁶ and reproduce 1, g, g² to
+6.7·10⁻¹⁶ for both placements of the midpoints, on uniform and power grids (r = 2, 3), n ∈ {8, 32, 128}
+(`ProjFunctionalsSamplingTest`). With `ThetaSampling.reparametrized` the norm max_j Σ|coefficients| equals
+3.000000 for β ∈ {1/2, 2/3}, as for the system B; with arithmetic midpoints it equals 3.828427 = 1 + 2√2 for
+β = 1/2 and 3.289815 for β = 2/3, the same for all measured grids and n. The families μ and λ reproduce
+1, g, g² to 6.7·10⁻¹⁶ on `Grid.power(32, r = 3.0)` for β ∈ {1/2, 1/3} (`ReparametrizedFamiliesTest`).
+The families ξ and ξ̃ use ψ' and reject a reparametrized system with an `IllegalArgumentException`.
+
+For `Grid.power` the largest ratio of neighbouring steps equals 2^r − 1 and is attained at j = 1, for
+r ∈ {1.5, 2, 3, 4, 6} and n ∈ {8, 64, 256} (the pair r = 6, n = 256 is rejected, see below); for `Grid.symmetricPower` it is attained at j = 1 or j = n − 1.
+The relative deviation from 2^r − 1 does not exceed 2.4·10⁻¹⁶, except for `symmetricPower` with r = 1.5,
+n = 256, where the steps of the right half are differences of nodes close to b and deviate by 2.4·10⁻¹³.
+The first step must exceed 4 `breakpointInclusionEps`, scaled with b − a: on [0, 1] with r = 6, `power`
+is built up to n = 250 and `symmetricPower` is rejected from n = 448 on (`GridPowerTest`). On these grids θ
+is biorthogonal to 3.3·10⁻¹⁶ for the system B and for the reparametrized system with β = 1/2.
